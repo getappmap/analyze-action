@@ -1,0 +1,2 @@
+describe('preflight-appmap-action', () => {
+});

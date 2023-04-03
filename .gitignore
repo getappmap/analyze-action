@@ -1,0 +1,15 @@
+# You know why
+node_modules
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary build output
+build
+tmp
+
+# Files created when testing this action on itself.
+test/fixture/appmap.yml
+patch
+
+# AppMap archive
+test/fixture/.appmap/archive/full/402dec8.tar
