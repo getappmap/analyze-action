@@ -21,3 +21,5 @@ $ yarn package
 ## TODO
 
 - [ ] Add description to action.yml.
+- [ ] Update repo description in GitHub.
+- [ ] Use appmap-action-utils
