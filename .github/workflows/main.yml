@@ -17,6 +17,8 @@ jobs:
         run: yarn install
       - name: Build
         run: yarn build
+      - name: Fetch LFS objects
+        run: git lfs checkout test/fixture/.appmap
       - name: Test
         run: yarn test
       - name: Build GitHub action
