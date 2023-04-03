@@ -1,0 +1,6 @@
+name: preflight-appmap-action
+packages:
+  - path: build
+  - path: src
+language: javascript
+appmap_dir: tmp/appmap
