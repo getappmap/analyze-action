@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+set -ex
+
+revision=$3
+mkdir -p .appmap/work/$revision
+tar xf .appmap/archive/full/$revision.tar -C .appmap/work/$revision

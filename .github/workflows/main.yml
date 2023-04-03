@@ -1,7 +1,10 @@
 on: [push]
 
+env:
+  APPMAP_TELEMETRY_DISABLED: 'true'
+
 jobs:
-  install_appmap_job:
+  ci:
     runs-on: ubuntu-latest
     name: Build, test and package
     steps:
@@ -21,9 +24,16 @@ jobs:
       - name: Make AppMaps
         # appmap-agent-js@13.6.0 doesn't propagate the jest exit code, so the main Test step cannot be the AppMap step.
         run: yarn appmap
-      - name: Create and store AppMaps archive
-        uses: ./
-        id: appmap-archive
+      - name: Archive AppMaps
+        uses: getappmap/archive-appmap-action@v1-pre.5
+        id: archive-appmaps
+        with:
+          verbose: true
+      # - name: Preflight this commit
+      #   uses: ./
+      #   id: appmap-preflight
+      #   with:
+      #     verbose: true
       - name: Commit changes
         # If you forgot to package the distribution, you'll see a commit added to your PR
         uses: EndBug/add-and-commit@v7
