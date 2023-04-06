@@ -267,9 +267,16 @@ class Restore {
             let cmd = `${this.appmapCommand} restore --revision ${this.revision}`;
             if ((0, verbose_1.default)())
                 cmd += ' --verbose';
-            if (this.repository)
-                cmd += ` --github-repo ${this.repository}`;
-            yield (0, executeCommand_1.executeCommand)(cmd);
+            const command = { cmd, options: {} };
+            if (this.repository) {
+                if (!this.githubToken)
+                    throw new Error(`GitHub repository specified, but no GitHub token provided`);
+                command.cmd += ` --github-repo ${this.repository}`;
+                command.options = {
+                    env: { GITHUB_TOKEN: this.githubToken },
+                };
+            }
+            yield (0, executeCommand_1.executeCommand)(command);
         });
     }
 }
@@ -315,9 +322,18 @@ const child_process_1 = __nccwpck_require__(2081);
 const log_1 = __importStar(__nccwpck_require__(1285));
 const verbose_1 = __importDefault(__nccwpck_require__(1753));
 function executeCommand(cmd, printCommand = (0, verbose_1.default)(), printStdout = (0, verbose_1.default)(), printStderr = (0, verbose_1.default)()) {
+    let command;
+    let commandString;
+    if (typeof cmd === 'string') {
+        commandString = cmd;
+        command = (0, child_process_1.exec)(cmd);
+    }
+    else {
+        commandString = cmd.cmd;
+        command = (0, child_process_1.exec)(cmd.cmd, cmd.options || {});
+    }
     if (printCommand)
-        console.log(cmd);
-    const command = (0, child_process_1.exec)(cmd);
+        console.log(commandString);
     const result = [];
     const stderr = [];
     if (command.stdout) {
@@ -341,7 +357,7 @@ function executeCommand(cmd, printCommand = (0, verbose_1.default)(), printStdou
             }
             else {
                 if (!printCommand)
-                    (0, log_1.default)(log_1.LogLevel.Warn, cmd);
+                    (0, log_1.default)(log_1.LogLevel.Warn, commandString);
                 (0, log_1.default)(log_1.LogLevel.Warn, stderr.join(''));
                 (0, log_1.default)(log_1.LogLevel.Warn, result.join(''));
                 reject(new Error(`Command failed with code ${code}`));
@@ -422,14 +438,16 @@ function runInGitHub() {
         if (!baseRef)
             throw new Error('base-revision argument must be provided, or GITHUB_BASE_REF must be available from GitHub (https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables).');
         const headRef = headRevisionArg || process.env.GITHUB_SHA;
-        const repository = process.env.GITHUB_REPOSITORY;
+        const githubToken = core.getInput('github-token');
+        const githubRepo = process.env.GITHUB_REPOSITORY;
         (0, assert_1.default)(baseRef, 'baseRef is undefined');
         (0, assert_1.default)(headRef, 'headRef is undefined');
         yield (0, run_1.default)(new GitHubArtifactStore(), {
             baseRef,
             headRef,
             sourceDir,
-            repository,
+            githubRepo,
+            githubToken,
         });
     });
 }
@@ -444,7 +462,8 @@ function runLocally() {
         parser.add_argument('--base-revision', { required: true });
         parser.add_argument('--head-revision', { required: true });
         parser.add_argument('--source-dir');
-        parser.add_argument('--git-repo');
+        parser.add_argument('--github-token');
+        parser.add_argument('--github-repo');
         const options = parser.parse_args();
         console.log(options);
         (0, verbose_1.default)(options.verbose === 'true' || options.verbose === true);
@@ -457,7 +476,8 @@ function runLocally() {
             baseRef: options.base_revision,
             headRef: options.head_revision,
             sourceDir: options.source_dir,
-            repository: options.git_repo,
+            githubToken: options.github_token,
+            githubRepo: options.github_repo,
         });
     });
 }
@@ -577,10 +597,12 @@ function run(artifactStore, options) {
         yield archiver.unpack(archiveResult.archiveFile, (0, path_1.join)(outputDir, 'head'));
         // Restore the base revision AppMaps into change-report/base.
         const restorer = new Restore_1.default(baseRevision);
+        if (options.githubToken)
+            restorer.githubToken = options.githubToken;
         if (options.appmapCommand)
             restorer.appmapCommand = options.appmapCommand;
-        if (options.repository)
-            restorer.repository = options.repository;
+        if (options.githubRepo)
+            restorer.repository = options.githubRepo;
         yield restorer.restore();
         const comparer = new Compare_1.default(artifactStore, baseRevision, headRevision);
         comparer.outputDir = outputDir;

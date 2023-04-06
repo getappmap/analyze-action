@@ -26,8 +26,9 @@ export default async function run(artifactStore: ArtifactStore, options: Command
 
   // Restore the base revision AppMaps into change-report/base.
   const restorer = new Restore(baseRevision);
+  if (options.githubToken) restorer.githubToken = options.githubToken;
   if (options.appmapCommand) restorer.appmapCommand = options.appmapCommand;
-  if (options.repository) restorer.repository = options.repository;
+  if (options.githubRepo) restorer.repository = options.githubRepo;
   await restorer.restore();
 
   const comparer = new Compare(artifactStore, baseRevision, headRevision);

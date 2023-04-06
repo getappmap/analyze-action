@@ -1,4 +1,5 @@
 import * as core from '@actions/core';
+import * as github from '@actions/github';
 import * as artifact from '@actions/artifact';
 import {ArgumentParser} from 'argparse';
 
@@ -13,7 +14,8 @@ export interface CommandOptions {
   headRef: string;
   appmapCommand?: string;
   sourceDir?: string;
-  repository?: string;
+  githubToken?: string;
+  githubRepo?: string;
 }
 
 class GitHubArtifactStore implements ArtifactStore {
@@ -38,7 +40,8 @@ async function runInGitHub(): Promise<void> {
     );
 
   const headRef = headRevisionArg || process.env.GITHUB_SHA;
-  const repository = process.env.GITHUB_REPOSITORY;
+  const githubToken = core.getInput('github-token');
+  const githubRepo = process.env.GITHUB_REPOSITORY;
 
   assert(baseRef, 'baseRef is undefined');
   assert(headRef, 'headRef is undefined');
@@ -47,7 +50,8 @@ async function runInGitHub(): Promise<void> {
     baseRef,
     headRef,
     sourceDir,
-    repository,
+    githubRepo,
+    githubToken,
   });
 }
 
@@ -61,7 +65,8 @@ async function runLocally() {
   parser.add_argument('--base-revision', {required: true});
   parser.add_argument('--head-revision', {required: true});
   parser.add_argument('--source-dir');
-  parser.add_argument('--git-repo');
+  parser.add_argument('--github-token');
+  parser.add_argument('--github-repo');
 
   const options = parser.parse_args();
 
@@ -77,7 +82,8 @@ async function runLocally() {
     baseRef: options.base_revision,
     headRef: options.head_revision,
     sourceDir: options.source_dir,
-    repository: options.git_repo,
+    githubToken: options.github_token,
+    githubRepo: options.github_repo,
   });
 }
 

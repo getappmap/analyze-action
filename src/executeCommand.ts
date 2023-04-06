@@ -1,15 +1,28 @@
-import {exec} from 'child_process';
+import {ChildProcess, exec, ExecOptions} from 'child_process';
 import log, {LogLevel} from './log';
 import verbose from './verbose';
 
+type Command = {
+  cmd: string;
+  options?: ExecOptions;
+};
+
 export function executeCommand(
-  cmd: string,
+  cmd: string | Command,
   printCommand = verbose(),
   printStdout = verbose(),
   printStderr = verbose()
 ): Promise<string> {
-  if (printCommand) console.log(cmd);
-  const command = exec(cmd);
+  let command: ChildProcess;
+  let commandString: string;
+  if (typeof cmd === 'string') {
+    commandString = cmd;
+    command = exec(cmd);
+  } else {
+    commandString = cmd.cmd;
+    command = exec(cmd.cmd, cmd.options || {});
+  }
+  if (printCommand) console.log(commandString);
   const result: string[] = [];
   const stderr: string[] = [];
   if (command.stdout) {
@@ -29,7 +42,7 @@ export function executeCommand(
       if (code === 0) {
         resolve(result.join(''));
       } else {
-        if (!printCommand) log(LogLevel.Warn, cmd);
+        if (!printCommand) log(LogLevel.Warn, commandString);
         log(LogLevel.Warn, stderr.join(''));
         log(LogLevel.Warn, result.join(''));
 
