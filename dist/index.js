@@ -258,13 +258,14 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 const executeCommand_1 = __nccwpck_require__(3285);
 const verbose_1 = __importDefault(__nccwpck_require__(1753));
 class Restore {
-    constructor(revision) {
+    constructor(revision, outputDir) {
         this.revision = revision;
+        this.outputDir = outputDir;
         this.appmapCommand = '/tmp/appmap';
     }
     restore() {
         return __awaiter(this, void 0, void 0, function* () {
-            let cmd = `${this.appmapCommand} restore --revision ${this.revision}`;
+            let cmd = `${this.appmapCommand} restore --revision ${this.revision} --output-dir ${this.outputDir}`;
             if ((0, verbose_1.default)())
                 cmd += ' --verbose';
             const command = { cmd, options: {} };
@@ -596,7 +597,7 @@ function run(artifactStore, options) {
         const archiveResult = yield archiver.archive();
         yield archiver.unpack(archiveResult.archiveFile, (0, path_1.join)(outputDir, 'head'));
         // Restore the base revision AppMaps into change-report/base.
-        const restorer = new Restore_1.default(baseRevision);
+        const restorer = new Restore_1.default(baseRevision, (0, path_1.join)(outputDir, 'head'));
         if (options.githubToken)
             restorer.githubToken = options.githubToken;
         if (options.appmapCommand)

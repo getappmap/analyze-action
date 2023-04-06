@@ -1,3 +1,4 @@
+import {mkdir} from 'fs/promises';
 import {executeCommand} from './executeCommand';
 import verbose from './verbose';
 
@@ -6,10 +7,10 @@ export default class Restore {
   public githubToken?: string;
   public appmapCommand = '/tmp/appmap';
 
-  constructor(public revision: string) {}
+  constructor(public revision: string, public outputDir: string) {}
 
   async restore() {
-    let cmd = `${this.appmapCommand} restore --revision ${this.revision}`;
+    let cmd = `${this.appmapCommand} restore --revision ${this.revision} --output-dir ${this.outputDir}`;
     if (verbose()) cmd += ' --verbose';
     const command = {cmd, options: {}};
     if (this.repository) {

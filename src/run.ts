@@ -1,7 +1,7 @@
 import Compare from './Compare';
 import Restore from './Restore';
 import {executeCommand} from './executeCommand';
-import {mkdir, rmdir} from 'fs/promises';
+import {mkdir} from 'fs/promises';
 import {join} from 'path';
 import Archiver from './Archiver';
 import ArtifactStore from './ArtifactStore';
@@ -25,7 +25,7 @@ export default async function run(artifactStore: ArtifactStore, options: Command
   await archiver.unpack(archiveResult.archiveFile, join(outputDir, 'head'));
 
   // Restore the base revision AppMaps into change-report/base.
-  const restorer = new Restore(baseRevision);
+  const restorer = new Restore(baseRevision, join(outputDir, 'base'));
   if (options.githubToken) restorer.githubToken = options.githubToken;
   if (options.appmapCommand) restorer.appmapCommand = options.appmapCommand;
   if (options.githubRepo) restorer.repository = options.githubRepo;
