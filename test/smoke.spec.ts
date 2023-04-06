@@ -22,9 +22,8 @@ describe('preflight-appmap-action', () => {
 
   describe('restore', () => {
     it('restores an AppMap archive', async () => {
-      const repository = 'myorg/myrepo';
-      const restorer = new Restore(repository, '7a0f6c186dc69575bbca3a2a67605b6df17a7485');
-      restorer.toolsPath = './restore';
+      const restorer = new Restore('7a0f6c186dc69575bbca3a2a67605b6df17a7485');
+      restorer.appmapCommand = './restore';
       await restorer.restore();
 
       const restoredFiles = (await glob('.appmap/work/**', {})).sort();

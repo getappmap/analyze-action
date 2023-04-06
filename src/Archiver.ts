@@ -1,33 +1,31 @@
-import {basename, dirname} from 'path';
-import {ArtifactStore} from './ArtifactStore';
+import {existsSync} from 'fs';
+import {mkdir} from 'fs/promises';
+import {basename, dirname, join} from 'path';
+import ArtifactStore from './ArtifactStore';
 import {executeCommand} from './executeCommand';
 import log, {LogLevel} from './log';
+import verbose from './verbose';
 
 export default class Archiver {
-  public toolsPath = '/tmp/appmap';
+  public appmapCommand = '/tmp/appmap';
   public archiveBranch = 'appmap-archive';
-  public revision?: boolean | string;
 
-  constructor(public artifactStore: ArtifactStore) {}
+  constructor(public artifactStore: ArtifactStore, public revision: string) {}
 
-  async archive(): Promise<{branchStatus: string[]}> {
+  async archive(): Promise<{archiveFile: string}> {
     log(LogLevel.Info, `Archiving AppMaps from ${process.cwd()}`);
 
-    const revision = this.revision === false ? undefined : this.revision || process.env.GITHUB_SHA;
-    let archiveCommand = `${this.toolsPath} archive`;
-    if (revision) archiveCommand += ` --revision ${revision}`;
+    let archiveCommand = `${this.appmapCommand} archive --revision ${this.revision}`;
+    if (verbose()) archiveCommand += ' --verbose';
     await executeCommand(archiveCommand);
 
-    const branchStatus = (await executeCommand('git status -u -s -- .appmap')).trim().split('\n');
-    log(LogLevel.Debug, `Branch status is:\n${branchStatus}`);
-
-    const archiveFiles = branchStatus
-      .map(status => status.split(' ')[1])
-      .filter(path => path.endsWith('.tar'));
+    const archiveFiles = [
+      join('.appmap', 'archive', 'full', `${this.revision}.tar`),
+      join('.appmap', 'archive', 'incremental', `${this.revision}.tar`),
+    ].filter(file => existsSync(file));
 
     if (archiveFiles.length === 0) {
-      log(LogLevel.Warn, `No AppMap archives found in ${process.cwd()}`);
-      return {branchStatus};
+      throw new Error(`No AppMap archives found in ${process.cwd()}`);
     }
     if (archiveFiles.length > 1) {
       log(LogLevel.Warn, `Mulitple AppMap archives found in ${process.cwd()}`);
@@ -46,12 +44,12 @@ export default class Archiver {
 
     await this.artifactStore.uploadArtifact(artifactName, [archiveFile]);
 
-    return {branchStatus};
+    return {archiveFile};
   }
 
-  async unpack(revision: string, directory: string) {
-    let archiveCommand = `${this.toolsPath} restore`;
-    if (revision) archiveCommand += ` --revision ${revision} --exact --output-dir ${directory}`;
-    await executeCommand(archiveCommand);
+  async unpack(archiveFile: string, directory: string) {
+    log(LogLevel.Info, `Unpacking AppMap archive ${archiveFile} into ${directory}`);
+    await mkdir(directory, {recursive: true});
+    await executeCommand(`tar -C ${directory} -xf ${archiveFile}`);
   }
 }

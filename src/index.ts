@@ -1,15 +1,20 @@
 import * as core from '@actions/core';
 import * as artifact from '@actions/artifact';
+import {ArgumentParser} from 'argparse';
+
 import {ActionLogger, setLogger} from './log';
-import Compare from './Compare';
-import Restore from './Restore';
 import verbose from './verbose';
 import assert from 'assert';
-import {executeCommand} from './executeCommand';
-import {mkdir} from 'fs/promises';
-import {join} from 'path';
-import Archiver from './Archiver';
-import {ArtifactStore} from './ArtifactStore';
+import ArtifactStore, {DirectoryArtifactStore} from './ArtifactStore';
+import run from './run';
+
+export interface CommandOptions {
+  baseRef: string;
+  headRef: string;
+  appmapCommand?: string;
+  sourceDir?: string;
+  repository?: string;
+}
 
 class GitHubArtifactStore implements ArtifactStore {
   async uploadArtifact(name: string, files: string[]): Promise<void> {
@@ -37,31 +42,46 @@ async function runInGitHub(): Promise<void> {
 
   assert(baseRef, 'baseRef is undefined');
   assert(headRef, 'headRef is undefined');
-  assert(repository, 'repository is undefined');
 
-  const baseRevision = (await executeCommand(`git rev-parse ${baseRef}`)).trim();
-  const headRevision = (await executeCommand(`git rev-parse ${headRef}`)).trim();
+  await run(new GitHubArtifactStore(), {
+    baseRef,
+    headRef,
+    sourceDir,
+    repository,
+  });
+}
 
-  const outputDir = `.appmap/change-report/${baseRevision}-${headRevision}`;
-  await mkdir(outputDir, {recursive: true});
+async function runLocally() {
+  const parser = new ArgumentParser({
+    description: 'Preflight command',
+  });
+  parser.add_argument('-v', '--verbose');
+  parser.add_argument('-d', '--directory', {help: 'Program working directory'});
+  parser.add_argument('--appmap-command', {default: '/tmp/appmap'});
+  parser.add_argument('--base-revision', {required: true});
+  parser.add_argument('--head-revision', {required: true});
+  parser.add_argument('--source-dir');
+  parser.add_argument('--git-repo');
 
-  // Build an archive of the current appmaps in the repo, and unpack it into
-  // change-report/head.
-  const archiver = new Archiver(new GitHubArtifactStore());
-  if (headRevision) archiver.revision = headRevision;
-  await archiver.archive();
-  await archiver.unpack(baseRevision, join(outputDir, 'head'));
+  const options = parser.parse_args();
 
-  // Restore the base revision AppMaps into change-report/base.
-  const restorer = new Restore(repository, baseRevision);
-  await restorer.restore();
+  console.log(options);
 
-  const comparer = new Compare(new GitHubArtifactStore(), baseRevision, headRevision);
-  comparer.outputDir = outputDir;
-  if (sourceDir) comparer.sourceDir = sourceDir;
-  await comparer.compare();
+  verbose(options.verbose === 'true' || options.verbose === true);
+  const outputDir = options.outputDir || '.appmap/artifacts';
+  const directory = options.directory;
+  if (directory) process.chdir(directory);
+
+  await run(new DirectoryArtifactStore(outputDir), {
+    appmapCommand: options.appmap_command,
+    baseRef: options.base_revision,
+    headRef: options.head_revision,
+    sourceDir: options.source_dir,
+    repository: options.git_repo,
+  });
 }
 
 if (require.main === module) {
-  runInGitHub();
+  if (process.env.CI) runInGitHub();
+  else runLocally();
 }

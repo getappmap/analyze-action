@@ -1,10 +1,12 @@
 import {glob} from 'glob';
-import {ArtifactStore} from './ArtifactStore';
+import {join} from 'path';
+import ArtifactStore from './ArtifactStore';
 import {executeCommand} from './executeCommand';
 import log, {LogLevel} from './log';
+import verbose from './verbose';
 
 export default class Compare {
-  public toolsPath = '/tmp/appmap';
+  public appmapCommand = '/tmp/appmap';
   public sourceDir?: string;
   public outputDir?: string;
 
@@ -15,19 +17,25 @@ export default class Compare {
   ) {}
 
   async compare() {
-    let cmd = `${this.toolsPath} compare --base-revision ${this.baseRevision} --head-revision ${this.headRevision} --clobber-output-dir=true`;
-    if (this.outputDir) cmd += ` --output-dir ${this.outputDir}`;
-    if (this.sourceDir) cmd += ` --source-dir ${this.sourceDir}`;
-    executeCommand(cmd);
-
-    log(LogLevel.Debug, `Storing GitHub artifact for the comparison report`);
-
     const outputDir =
       this.outputDir || `.appmap/change-report/${this.baseRevision}-${this.headRevision}`;
-    const files = await glob(`${outputDir}/**/*`);
-    await this.artifactStore.uploadArtifact(
-      'appmap-preflight-${this.baseRevision}-${this.headRevision}',
-      files
+
+    log(
+      LogLevel.Info,
+      `Comparing base revision ${this.baseRevision} to head revision ${this.headRevision}`
     );
+    log(LogLevel.Debug, `Report output directory is ${outputDir}`);
+
+    let cmd = `${this.appmapCommand} compare --base-revision ${this.baseRevision} --head-revision ${this.headRevision} --clobber-output-dir=true`;
+    if (verbose()) cmd += ' --verbose';
+    if (this.outputDir) cmd += ` --output-dir ${outputDir}`;
+    if (this.sourceDir) cmd += ` --source-dir ${this.sourceDir}`;
+    await executeCommand(cmd);
+
+    const reportFile = `appmap-preflight-${this.baseRevision}-${this.headRevision}.tar.gz`;
+    await executeCommand(`tar -czf ${join(outputDir, reportFile)} -C ${outputDir} .`);
+
+    log(LogLevel.Info, `Storing comparison report ${reportFile}`);
+    await this.artifactStore.uploadArtifact(reportFile, [join(outputDir, reportFile)]);
   }
 }

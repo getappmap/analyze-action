@@ -1,13 +1,16 @@
 import {executeCommand} from './executeCommand';
+import verbose from './verbose';
 
 export default class Restore {
-  public toolsPath = '/tmp/appmap';
+  public repository?: string;
+  public appmapCommand = '/tmp/appmap';
 
-  constructor(public repository: string, public revision: string) {}
+  constructor(public revision: string) {}
 
   async restore() {
-    await executeCommand(
-      `${this.toolsPath} restore --revision ${this.revision} --github-repo ${this.repository}`
-    );
+    let cmd = `${this.appmapCommand} restore --revision ${this.revision}`;
+    if (verbose()) cmd += ' --verbose';
+    if (this.repository) cmd += ` --github-repo ${this.repository}`;
+    await executeCommand(cmd);
   }
 }
