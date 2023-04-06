@@ -49,6 +49,7 @@ async function runInGitHub(): Promise<void> {
   // change-report/head.
   const archiver = new Archiver(new GitHubArtifactStore());
   if (headRevision) archiver.revision = headRevision;
+  await archiver.archive();
   await archiver.unpack(baseRevision, join(outputDir, 'head'));
 
   // Restore the base revision AppMaps into change-report/base.
