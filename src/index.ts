@@ -33,9 +33,12 @@ async function runInGitHub(): Promise<void> {
     );
 
   const headRef = headRevisionArg || process.env.GITHUB_SHA;
+  const repository = process.env.GITHUB_REPOSITORY;
 
-  assert(baseRef);
-  assert(headRef);
+  assert(baseRef, 'baseRef is undefined');
+  assert(headRef, 'headRef is undefined');
+  assert(repository, 'repository is undefined');
+
   const baseRevision = (await executeCommand(`git rev-parse ${baseRef}`)).trim();
   const headRevision = (await executeCommand(`git rev-parse ${headRef}`)).trim();
 
@@ -49,7 +52,7 @@ async function runInGitHub(): Promise<void> {
   await archiver.unpack(baseRevision, join(outputDir, 'head'));
 
   // Restore the base revision AppMaps into change-report/base.
-  const restorer = new Restore(baseRevision);
+  const restorer = new Restore(repository, baseRevision);
   await restorer.restore();
 
   const comparer = new Compare(new GitHubArtifactStore(), baseRevision, headRevision);

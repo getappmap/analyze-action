@@ -16,8 +16,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-        with: # This is needed on a PR, because the checkout action doesn't fetch the base or head branches
+        with:
+          # This is needed to see the version history, because
+          # checkout action doesn't fetch the base or head branches
           ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
       - name: Install and configure AppMap
         uses: getappmap/install-appmap-action@v1-pre.5
         id: install-appmap
