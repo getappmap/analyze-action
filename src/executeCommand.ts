@@ -4,23 +4,23 @@ import verbose from './verbose';
 
 export function executeCommand(
   cmd: string,
-  printCommand = false,
-  printStdout = false,
-  printStderr = false
+  printCommand = verbose(),
+  printStdout = verbose(),
+  printStderr = verbose()
 ): Promise<string> {
-  if (printCommand || verbose()) console.log(cmd);
+  if (printCommand) console.log(cmd);
   const command = exec(cmd);
   const result: string[] = [];
   const stderr: string[] = [];
   if (command.stdout) {
     command.stdout.addListener('data', data => {
-      if (printStdout || verbose()) log(LogLevel.Debug, data);
+      if (printStdout) log(LogLevel.Debug, data);
       result.push(data);
     });
   }
   if (command.stderr) {
     command.stderr.addListener('data', data => {
-      if (printStderr || verbose()) log(LogLevel.Debug, data);
+      if (printStderr) log(LogLevel.Debug, data);
       stderr.push(data);
     });
   }

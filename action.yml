@@ -1,8 +1,15 @@
 name: Build a preflight report for a repository.
 inputs:
+  base-revision:
+    description: |
+      The base revision to compare against. The default is the GITHUB_BASE_REF, which
+      according to GitHub is the name of the base ref or target branch of the pull request in a workflow run.
+  head-revision:
+    description: |
+      The head revision to compare against. The default is the GITHUB_SHA, which
+      according to GitHub is the commit that triggered the workflow run.
   verbose:
     description: Enable verbose logging.
-    required: false
     default: false
 runs:
   using: 'node16'

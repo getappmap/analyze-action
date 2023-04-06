@@ -107,22 +107,22 @@ exports.executeCommand = void 0;
 const child_process_1 = __nccwpck_require__(81);
 const log_1 = __importStar(__nccwpck_require__(285));
 const verbose_1 = __importDefault(__nccwpck_require__(753));
-function executeCommand(cmd, printCommand = false, printStdout = false, printStderr = false) {
-    if (printCommand || (0, verbose_1.default)())
+function executeCommand(cmd, printCommand = (0, verbose_1.default)(), printStdout = (0, verbose_1.default)(), printStderr = (0, verbose_1.default)()) {
+    if (printCommand)
         console.log(cmd);
     const command = (0, child_process_1.exec)(cmd);
     const result = [];
     const stderr = [];
     if (command.stdout) {
         command.stdout.addListener('data', data => {
-            if (printStdout || (0, verbose_1.default)())
+            if (printStdout)
                 (0, log_1.default)(log_1.LogLevel.Debug, data);
             result.push(data);
         });
     }
     if (command.stderr) {
         command.stderr.addListener('data', data => {
-            if (printStderr || (0, verbose_1.default)())
+            if (printStderr)
                 (0, log_1.default)(log_1.LogLevel.Debug, data);
             stderr.push(data);
         });

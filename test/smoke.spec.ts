@@ -2,18 +2,23 @@ import Restore from '../src/Restore';
 
 import {cp, rm} from 'fs/promises';
 import {join} from 'path';
-import {promisify} from 'util';
 import {glob} from 'glob';
+import verbose from '../src/verbose';
 
 const pwd = process.cwd();
 const fixtureDir = join(__dirname, 'fixture');
 const workDir = join(__dirname, 'work');
+
+if (process.env.VERBOSE) verbose(true);
 
 describe('preflight-appmap-action', () => {
   beforeEach(async () => cp(fixtureDir, workDir, {recursive: true, force: true}));
   beforeEach(() => process.chdir(workDir));
   afterEach(() => process.chdir(pwd));
   afterEach(async () => rm(workDir, {recursive: true, force: true}));
+
+  // TODO: Share the Archiver code with getappmap/archive action
+  describe('archive', () => {});
 
   describe('restore', () => {
     it('restores an AppMap archive', async () => {
