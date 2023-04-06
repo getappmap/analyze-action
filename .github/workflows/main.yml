@@ -30,8 +30,8 @@ jobs:
       - name: Preflight
         uses: ./
         with:
-          base-version: ${{ github.event.pull_request.base.sha }}
-          head-version: ${{ github.event.pull_request.head.sha }}
+          base-revision: ${{ github.event.pull_request.base.sha }}
+          head-revision: ${{ github.event.pull_request.head.sha }}
           verbose: true
       - name: Test
         run: yarn test

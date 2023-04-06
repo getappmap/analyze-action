@@ -8,12 +8,13 @@ import assert from 'assert';
 import {executeCommand} from './executeCommand';
 import {mkdir} from 'fs/promises';
 import {join} from 'path';
-import Archiver, {ArtifactStore} from './Archiver';
+import Archiver from './Archiver';
+import {ArtifactStore} from './ArtifactStore';
 
 class GitHubArtifactStore implements ArtifactStore {
-  async uploadArtifact(name: string, path: string): Promise<void> {
+  async uploadArtifact(name: string, files: string[]): Promise<void> {
     const artifactClient = artifact.create();
-    await artifactClient.uploadArtifact(name, [path], process.cwd());
+    await artifactClient.uploadArtifact(name, files, process.cwd());
   }
 }
 
@@ -51,7 +52,7 @@ async function runInGitHub(): Promise<void> {
   const restorer = new Restore(baseRevision);
   await restorer.restore();
 
-  const comparer = new Compare(baseRevision, headRevision);
+  const comparer = new Compare(new GitHubArtifactStore(), baseRevision, headRevision);
   comparer.outputDir = outputDir;
   if (sourceDir) comparer.sourceDir = sourceDir;
   await comparer.compare();

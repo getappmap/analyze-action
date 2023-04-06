@@ -1,11 +1,7 @@
-import {mkdir} from 'fs/promises';
 import {basename, dirname} from 'path';
+import {ArtifactStore} from './ArtifactStore';
 import {executeCommand} from './executeCommand';
 import log, {LogLevel} from './log';
-
-export interface ArtifactStore {
-  uploadArtifact(name: string, path: string): Promise<void>;
-}
 
 export default class Archiver {
   public toolsPath = '/tmp/appmap';
@@ -48,7 +44,7 @@ export default class Archiver {
     const [sha] = basename(archiveFile).split('.');
     const artifactName = `${artifactPrefix}_${sha}.tar`;
 
-    await this.artifactStore.uploadArtifact(artifactName, archiveFile);
+    await this.artifactStore.uploadArtifact(artifactName, [archiveFile]);
 
     return {branchStatus};
   }
