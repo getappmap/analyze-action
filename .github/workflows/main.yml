@@ -23,9 +23,9 @@ jobs:
       - name: Install and configure AppMap
         uses: getappmap/install-appmap-action@v1-pre.5
         id: install-appmap
-      - name: Update AppMap tools to v2
+      - name: Upgrade AppMap tools
         run: |
-          curl -L -o /tmp/appmap https://github.com/getappmap/appmap-js/releases/download/%40appland%2Fappmap-preflight-v1.0-pre.2/appmap-preflight-linux-x64
+          curl -L -o /tmp/appmap https://github.com/getappmap/appmap-js/releases/download/%40appland%2Fappmap-preflight-v1.0-pre.3/appmap-preflight-linux-x64
           chmod a+x /tmp/appmap
       - name: Install dependency libraries
         run: yarn install
