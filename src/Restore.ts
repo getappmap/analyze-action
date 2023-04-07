@@ -1,5 +1,4 @@
-import {mkdir} from 'fs/promises';
-import {executeCommand} from './executeCommand';
+import {Command, executeCommand} from './executeCommand';
 import verbose from './verbose';
 
 export default class Restore {
@@ -12,14 +11,16 @@ export default class Restore {
   async restore() {
     let cmd = `${this.appmapCommand} restore --revision ${this.revision} --output-dir ${this.outputDir}`;
     if (verbose()) cmd += ' --verbose';
-    const command = {cmd, options: {}};
+    let command: string | Command = cmd;
     if (this.repository) {
       if (!this.githubToken)
         throw new Error(`GitHub repository specified, but no GitHub token provided`);
 
-      command.cmd += ` --github-repo ${this.repository}`;
-      command.options = {
-        env: {GITHUB_TOKEN: this.githubToken},
+      command = {
+        cmd: cmd + ` --github-repo ${this.repository}`,
+        options: {
+          env: {...process.env, ...{GITHUB_TOKEN: this.githubToken}},
+        },
       };
     }
 

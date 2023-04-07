@@ -268,13 +268,15 @@ class Restore {
             let cmd = `${this.appmapCommand} restore --revision ${this.revision} --output-dir ${this.outputDir}`;
             if ((0, verbose_1.default)())
                 cmd += ' --verbose';
-            const command = { cmd, options: {} };
+            let command = cmd;
             if (this.repository) {
                 if (!this.githubToken)
                     throw new Error(`GitHub repository specified, but no GitHub token provided`);
-                command.cmd += ` --github-repo ${this.repository}`;
-                command.options = {
-                    env: { GITHUB_TOKEN: this.githubToken },
+                command = {
+                    cmd: cmd + ` --github-repo ${this.repository}`,
+                    options: {
+                        env: Object.assign(Object.assign({}, process.env), { GITHUB_TOKEN: this.githubToken }),
+                    },
                 };
             }
             yield (0, executeCommand_1.executeCommand)(command);
@@ -466,7 +468,6 @@ function runLocally() {
         parser.add_argument('--github-token');
         parser.add_argument('--github-repo');
         const options = parser.parse_args();
-        console.log(options);
         (0, verbose_1.default)(options.verbose === 'true' || options.verbose === true);
         const outputDir = options.outputDir || '.appmap/artifacts';
         const directory = options.directory;
@@ -597,7 +598,7 @@ function run(artifactStore, options) {
         const archiveResult = yield archiver.archive();
         yield archiver.unpack(archiveResult.archiveFile, (0, path_1.join)(outputDir, 'head'));
         // Restore the base revision AppMaps into change-report/base.
-        const restorer = new Restore_1.default(baseRevision, (0, path_1.join)(outputDir, 'head'));
+        const restorer = new Restore_1.default(baseRevision, (0, path_1.join)(outputDir, 'base'));
         if (options.githubToken)
             restorer.githubToken = options.githubToken;
         if (options.appmapCommand)

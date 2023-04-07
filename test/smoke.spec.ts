@@ -22,7 +22,7 @@ describe('preflight-appmap-action', () => {
 
   describe('restore', () => {
     it('restores an AppMap archive', async () => {
-      const restorer = new Restore('7a0f6c186dc69575bbca3a2a67605b6df17a7485');
+      const restorer = new Restore('7a0f6c186dc69575bbca3a2a67605b6df17a7485', '.appmap/work');
       restorer.appmapCommand = './restore';
       await restorer.restore();
 

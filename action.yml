@@ -8,6 +8,10 @@ inputs:
     description: |
       The head revision to compare against. The default is the GITHUB_SHA, which
       according to GitHub is the commit that triggered the workflow run.
+  github-token:
+    description: |
+      The GitHub token to use with the GitHub API to pull AppMap archives from build artifacts.
+      Most commonly, you'll use `secrets.GITHUB_TOKEN`, which is automatically provided by GitHub.
   verbose:
     description: Enable verbose logging.
     default: false

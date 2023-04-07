@@ -2,7 +2,7 @@ import {ChildProcess, exec, ExecOptions} from 'child_process';
 import log, {LogLevel} from './log';
 import verbose from './verbose';
 
-type Command = {
+export type Command = {
   cmd: string;
   options?: ExecOptions;
 };

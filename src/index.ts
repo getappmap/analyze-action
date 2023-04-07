@@ -1,5 +1,4 @@
 import * as core from '@actions/core';
-import * as github from '@actions/github';
 import * as artifact from '@actions/artifact';
 import {ArgumentParser} from 'argparse';
 
@@ -69,8 +68,6 @@ async function runLocally() {
   parser.add_argument('--github-repo');
 
   const options = parser.parse_args();
-
-  console.log(options);
 
   verbose(options.verbose === 'true' || options.verbose === true);
   const outputDir = options.outputDir || '.appmap/artifacts';
