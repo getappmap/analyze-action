@@ -33,7 +33,13 @@ export default class Compare {
     await executeCommand(cmd);
 
     const reportFile = `appmap-preflight-${this.baseRevision}-${this.headRevision}.tar.gz`;
-    await executeCommand(`tar -czf ${join(outputDir, reportFile)} -C ${outputDir} .`);
+    const dir = process.cwd();
+    process.chdir(outputDir);
+    try {
+      await executeCommand(`tar -czf ${reportFile} *`);
+    } finally {
+      process.chdir(dir);
+    }
 
     log(LogLevel.Info, `Storing comparison report ${reportFile}`);
     await this.artifactStore.uploadArtifact(reportFile, [join(outputDir, reportFile)]);

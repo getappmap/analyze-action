@@ -226,7 +226,14 @@ class Compare {
                 cmd += ` --source-dir ${this.sourceDir}`;
             yield (0, executeCommand_1.executeCommand)(cmd);
             const reportFile = `appmap-preflight-${this.baseRevision}-${this.headRevision}.tar.gz`;
-            yield (0, executeCommand_1.executeCommand)(`tar -czf ${(0, path_1.join)(outputDir, reportFile)} -C ${outputDir} .`);
+            const dir = process.cwd();
+            process.chdir(outputDir);
+            try {
+                yield (0, executeCommand_1.executeCommand)(`tar -czf ${reportFile} *`);
+            }
+            finally {
+                process.chdir(dir);
+            }
             (0, log_1.default)(log_1.LogLevel.Info, `Storing comparison report ${reportFile}`);
             yield this.artifactStore.uploadArtifact(reportFile, [(0, path_1.join)(outputDir, reportFile)]);
         });
