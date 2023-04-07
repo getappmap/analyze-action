@@ -1,11 +1,29 @@
-import {executeCommand} from './executeCommand';
+import {Command, executeCommand} from './executeCommand';
+import verbose from './verbose';
 
 export default class Restore {
-  public toolsPath = '/tmp/appmap';
+  public repository?: string;
+  public githubToken?: string;
+  public appmapCommand = '/tmp/appmap';
 
-  constructor(public revision: string) {}
+  constructor(public revision: string, public outputDir: string) {}
 
   async restore() {
-    await executeCommand(`${this.toolsPath} restore --revision ${this.revision}`);
+    let cmd = `${this.appmapCommand} restore --revision ${this.revision} --output-dir ${this.outputDir}`;
+    if (verbose()) cmd += ' --verbose';
+    let command: string | Command = cmd;
+    if (this.repository) {
+      if (!this.githubToken)
+        throw new Error(`GitHub repository specified, but no GitHub token provided`);
+
+      command = {
+        cmd: cmd + ` --github-repo ${this.repository}`,
+        options: {
+          env: {...process.env, ...{GITHUB_TOKEN: this.githubToken}},
+        },
+      };
+    }
+
+    await executeCommand(command);
   }
 }

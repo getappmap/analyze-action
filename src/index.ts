@@ -1,12 +1,28 @@
 import * as core from '@actions/core';
+import * as artifact from '@actions/artifact';
+import {ArgumentParser} from 'argparse';
+
 import {ActionLogger, setLogger} from './log';
-import Compare from './Compare';
-import Restore from './Restore';
 import verbose from './verbose';
 import assert from 'assert';
-import {executeCommand} from './executeCommand';
-import {existsSync} from 'fs';
-import {mkdir} from 'fs/promises';
+import ArtifactStore, {DirectoryArtifactStore} from './ArtifactStore';
+import run from './run';
+
+export interface CommandOptions {
+  baseRef: string;
+  headRef: string;
+  appmapCommand?: string;
+  sourceDir?: string;
+  githubToken?: string;
+  githubRepo?: string;
+}
+
+class GitHubArtifactStore implements ArtifactStore {
+  async uploadArtifact(name: string, files: string[]): Promise<void> {
+    const artifactClient = artifact.create();
+    await artifactClient.uploadArtifact(name, files, process.cwd());
+  }
+}
 
 async function runInGitHub(): Promise<void> {
   verbose(core.getBooleanInput('verbose'));
@@ -17,24 +33,58 @@ async function runInGitHub(): Promise<void> {
   const sourceDir = core.getInput('source-dir');
 
   const baseRef = baseRevisionArg || process.env.GITHUB_BASE_REF;
-  const headRevision = headRevisionArg || process.env.GITHUB_SHA;
+  if (!baseRef)
+    throw new Error(
+      'base-revision argument must be provided, or GITHUB_BASE_REF must be available from GitHub (https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables).'
+    );
 
-  assert(baseRef);
-  assert(headRevision);
-  const baseRevision = (await executeCommand(`git rev-parse ${baseRef}`)).trim();
+  const headRef = headRevisionArg || process.env.GITHUB_SHA;
+  const githubToken = core.getInput('github-token');
+  const githubRepo = process.env.GITHUB_REPOSITORY;
 
-  const outputDir = `.appmap/change-report/${baseRevision}-${headRevision}`;
-  await mkdir(outputDir, {recursive: true});
+  assert(baseRef, 'baseRef is undefined');
+  assert(headRef, 'headRef is undefined');
 
-  const restorer = new Restore(baseRevision);
-  await restorer.restore();
+  await run(new GitHubArtifactStore(), {
+    baseRef,
+    headRef,
+    sourceDir,
+    githubRepo,
+    githubToken,
+  });
+}
 
-  const comparer = new Compare(baseRevision, headRevision);
-  comparer.outputDir = outputDir;
-  if (sourceDir) comparer.sourceDir = sourceDir;
-  await comparer.compare();
+async function runLocally() {
+  const parser = new ArgumentParser({
+    description: 'Preflight command',
+  });
+  parser.add_argument('-v', '--verbose');
+  parser.add_argument('-d', '--directory', {help: 'Program working directory'});
+  parser.add_argument('--appmap-command', {default: '/tmp/appmap'});
+  parser.add_argument('--base-revision', {required: true});
+  parser.add_argument('--head-revision', {required: true});
+  parser.add_argument('--source-dir');
+  parser.add_argument('--github-token');
+  parser.add_argument('--github-repo');
+
+  const options = parser.parse_args();
+
+  verbose(options.verbose === 'true' || options.verbose === true);
+  const outputDir = options.outputDir || '.appmap/artifacts';
+  const directory = options.directory;
+  if (directory) process.chdir(directory);
+
+  await run(new DirectoryArtifactStore(outputDir), {
+    appmapCommand: options.appmap_command,
+    baseRef: options.base_revision,
+    headRef: options.head_revision,
+    sourceDir: options.source_dir,
+    githubToken: options.github_token,
+    githubRepo: options.github_repo,
+  });
 }
 
 if (require.main === module) {
-  runInGitHub();
+  if (process.env.CI) runInGitHub();
+  else runLocally();
 }

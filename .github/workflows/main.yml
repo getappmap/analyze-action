@@ -1,39 +1,50 @@
-on: [push]
+name: AppMap Archive
+
+on:
+  pull_request:
+  schedule:
+    # Keep the artifact up to date, as it will expire after 90 days.
+    - cron: 1 1 1 * *
 
 env:
   APPMAP_TELEMETRY_DISABLED: 'true'
 
 jobs:
-  ci:
+  appmap_archive_main:
     runs-on: ubuntu-latest
-    name: Build, test and package
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+        with:
+          # This is needed to see the version history, because
+          # checkout action doesn't fetch the base or head branches
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
       - name: Install and configure AppMap
-        uses: getappmap/install-appmap-action@v1-pre.2
+        uses: getappmap/install-appmap-action@v1-pre.5
         id: install-appmap
+      - name: Upgrade AppMap tools
+        run: |
+          curl -L -o /tmp/appmap https://github.com/getappmap/appmap-js/releases/download/%40appland%2Fappmap-preflight-v1.0-pre.3/appmap-preflight-linux-x64
+          chmod a+x /tmp/appmap
       - name: Install dependency libraries
         run: yarn install
       - name: Build
         run: yarn build
+      - name: Make AppMaps
+        run: yarn appmap || true
+      - name: Preflight
+        id: preflight-report
+        uses: ./
+        with:
+          base-revision: ${{ github.event.pull_request.base.sha }}
+          head-revision: ${{ github.event.pull_request.head.sha }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          verbose: true
       - name: Test
         run: yarn test
       - name: Build GitHub action
         run: yarn package
-      - name: Make AppMaps
-        # appmap-agent-js@13.6.0 doesn't propagate the jest exit code, so the main Test step cannot be the AppMap step.
-        run: yarn appmap
-      - name: Archive AppMaps
-        uses: getappmap/archive-appmap-action@v1-pre.5
-        id: archive-appmaps
-        with:
-          verbose: true
-      # - name: Preflight this commit
-      #   uses: ./
-      #   id: appmap-preflight
-      #   with:
-      #     verbose: true
       - name: Commit changes
         # If you forgot to package the distribution, you'll see a commit added to your PR
         uses: EndBug/add-and-commit@v7
