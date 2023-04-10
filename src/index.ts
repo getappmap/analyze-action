@@ -1,28 +1,12 @@
 import * as core from '@actions/core';
-import * as artifact from '@actions/artifact';
 import {ArgumentParser} from 'argparse';
 
 import {ActionLogger, setLogger} from './log';
 import verbose from './verbose';
 import assert from 'assert';
-import ArtifactStore, {DirectoryArtifactStore} from './ArtifactStore';
+import {DirectoryArtifactStore} from './DirectoryArtifactStore';
 import run from './run';
-
-export interface CommandOptions {
-  baseRef: string;
-  headRef: string;
-  appmapCommand?: string;
-  sourceDir?: string;
-  githubToken?: string;
-  githubRepo?: string;
-}
-
-class GitHubArtifactStore implements ArtifactStore {
-  async uploadArtifact(name: string, files: string[]): Promise<void> {
-    const artifactClient = artifact.create();
-    await artifactClient.uploadArtifact(name, files, process.cwd());
-  }
-}
+import {GitHubArtifactStore} from './GitHubArtifactStore';
 
 async function runInGitHub(): Promise<void> {
   verbose(core.getBooleanInput('verbose'));
