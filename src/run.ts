@@ -1,12 +1,13 @@
 import Compare from './Compare';
 import Restore from './Restore';
 import {executeCommand} from './executeCommand';
-import {mkdir} from 'fs/promises';
+import {mkdir, readFile, writeFile} from 'fs/promises';
 import {join} from 'path';
 import Archiver from './Archiver';
 import ArtifactStore from './ArtifactStore';
 import {CommandOptions} from './CommandOptions';
 import {existsSync} from 'fs';
+import MarkdownReport from './report/MarkdownReport';
 
 export default async function run(artifactStore: ArtifactStore, options: CommandOptions) {
   const baseRevision = (await executeCommand(`git rev-parse ${options.baseRef}`)).trim();
@@ -36,4 +37,11 @@ export default async function run(artifactStore: ArtifactStore, options: Command
   if (options.appmapCommand) comparer.appmapCommand = options.appmapCommand;
   if (options.sourceDir) comparer.sourceDir = options.sourceDir;
   await comparer.compare();
+
+  if (process.env.GITHUB_STEP_SUMMARY) {
+    const changeReport = await readFile(join(outputDir, 'change-report.json'), 'utf-8');
+    const reporter = new MarkdownReport();
+    const report = await reporter.generateReport(JSON.parse(changeReport));
+    await writeFile(process.env.GITHUB_STEP_SUMMARY, report);
+  }
 }

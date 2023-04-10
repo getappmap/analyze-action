@@ -1,0 +1,2709 @@
+{
+  "testFailures": [],
+  "newAppMaps": [
+    "minitest/Password_resets_password_resets",
+    "minitest/Users_controller_should_redirect_destroy_when_logged_in_as_a_non-admin",
+    "minitest/Users_controller_should_redirect_destroy_when_not_logged_in",
+    "minitest/Users_controller_should_redirect_edit_when_logged_in_as_wrong_user",
+    "minitest/Users_controller_should_redirect_edit_when_not_logged_in",
+    "minitest/Users_controller_should_redirect_index_when_not_logged_in",
+    "minitest/Users_controller_should_redirect_update_when_logged_in_as_wrong_user",
+    "minitest/Users_controller_should_redirect_update_when_not_logged_in",
+    "minitest/Users_edit_successful_edit_with_friendly_forwarding",
+    "minitest/Users_edit_unsuccessful_edit",
+    "minitest/Users_index_index_as_admin_including_pagination_and_delete_links",
+    "minitest/Users_index_index_as_non-admin",
+    "minitest/Users_login_login_with_remembering",
+    "minitest/Users_login_login_without_remembering",
+    "minitest/Users_signup_valid_signup_information_with_account_activation"
+  ],
+  "changedAppMaps": [
+    {
+      "appmap": "minitest/Sessions_controller_should_get_new",
+      "sourceDiff": "diff --git a/app/controllers/sessions_controller.rb b/app/controllers/sessions_controller.rb\nindex 313726f..1f5acd6 100644\n--- a/app/controllers/sessions_controller.rb\n+++ b/app/controllers/sessions_controller.rb\n@@ -6,9 +6,18 @@ class SessionsController < ApplicationController\n   def create\n     user = User.find_by(email: params[:session][:email].downcase)\n     if user && user.authenticate(params[:session][:password])\n-      reset_session\n-      log_in user\n-      redirect_to user\n+      if user.activated?\n+        forwarding_url = session[:forwarding_url]\n+        reset_session\n+        log_in user\n+        params[:session][:remember_me] == '1' ? remember(user) : forget(user)\n+        redirect_to forwarding_url || user\n+      else\n+        message  = \"Account not activated. \"\n+        message += \"Check your email for the activation link.\"\n+        flash[:warning] = message\n+        redirect_to root_url\n+      end\n     else\n       flash.now[:danger] = 'Invalid email/password combination'\n       render 'new'\n@@ -16,7 +25,7 @@ class SessionsController < ApplicationController\n   end\n \n   def destroy\n-    log_out\n+    log_out if logged_in?\n     redirect_to root_url\n   end\n end\ndiff --git a/app/helpers/sessions_helper.rb b/app/helpers/sessions_helper.rb\nindex d3b65f7..fb4835f 100644\n--- a/app/helpers/sessions_helper.rb\n+++ b/app/helpers/sessions_helper.rb\n@@ -5,21 +5,52 @@ module SessionsHelper\n     session[:user_id] = user.id\n   end\n \n-  # Returns the current logged-in user (if any).\n+  # Remembers a user in a persistent session.\n+  def remember(user)\n+    user.remember\n+    cookies.permanent.encrypted[:user_id] = user.id\n+    cookies.permanent[:remember_token] = user.remember_token\n+  end\n+\n+  # Returns the user corresponding to the remember token cookie.\n   def current_user\n-    if session[:user_id]\n-      @current_user ||= User.find_by(id: session[:user_id])\n+    if (user_id = session[:user_id])\n+      @current_user ||= User.find_by(id: user_id)\n+    elsif (user_id = cookies.encrypted[:user_id])\n+      user = User.find_by(id: user_id)\n+      if user && user.authenticated?(:remember, cookies[:remember_token])\n+        log_in user\n+        @current_user = user\n+      end\n     end\n   end\n \n+  # Returns true if the given user is the current user.\n+  def current_user?(user)\n+    user == current_user\n+  end\n+\n   # Returns true if the user is logged in, false otherwise.\n   def logged_in?\n     !current_user.nil?\n   end\n \n+  # Forgets a persistent session.\n+  def forget(user)\n+    user.forget\n+    cookies.delete(:user_id)\n+    cookies.delete(:remember_token)\n+  end\n+\n   # Logs out the current user.\n   def log_out\n+    forget(current_user)\n     reset_session\n     @current_user = nil\n   end\n+\n+  # Stores the URL trying to be accessed.\n+  def store_location\n+    session[:forwarding_url] = request.original_url if request.get?\n+  end\n end\ndiff --git a/app/views/layouts/_header.html.erb b/app/views/layouts/_header.html.erb\nindex fe59272..03cfeee 100644\n--- a/app/views/layouts/_header.html.erb\n+++ b/app/views/layouts/_header.html.erb\n@@ -18,14 +18,14 @@\n         <li><%= link_to \"Home\", root_path %></li>\n         <li><%= link_to \"Help\", help_path %></li>\n         <% if logged_in? %>\n-          <li><%= link_to \"Users\", '#' %></li>\n+          <li><%= link_to \"Users\", users_path %></li>\n           <li class=\"dropdown\">\n             <a href=\"#\" class=\"dropdown-toggle\" data-toggle=\"dropdown\">\n               Account <b class=\"caret\"></b>\n             </a>\n             <ul class=\"dropdown-menu\">\n               <li><%= link_to \"Profile\", current_user %></li>\n-              <li><%= link_to \"Settings\", '#' %></li>\n+              <li><%= link_to \"Settings\", edit_user_path(current_user) %></li>\n               <li class=\"divider\"></li>\n               <li>\n                 <%= link_to \"Log out\", logout_path, method: :delete %>\ndiff --git a/app/views/sessions/new.html.erb b/app/views/sessions/new.html.erb\nindex 17825a6..aedf6ce 100644\n--- a/app/views/sessions/new.html.erb\n+++ b/app/views/sessions/new.html.erb\n@@ -9,8 +9,14 @@\n       <%= f.email_field :email, class: 'form-control' %>\n \n       <%= f.label :password %>\n+      <%= link_to \"(forgot password)\", new_password_reset_path %>\n       <%= f.password_field :password, class: 'form-control' %>\n \n+      <%= f.label :remember_me, class: \"checkbox inline\" do %>\n+        <%= f.check_box :remember_me %>\n+        <span>Remember me on this computer</span>\n+      <% end %>\n+\n       <%= f.submit \"Log in\", class: \"btn btn-primary\" %>\n     <% end %>\n \n",
+      "sequenceDiagramDiff": "diff/minitest/Sessions_controller_should_get_new.diff.sequence.json"
+    },
+    {
+      "appmap": "minitest/Site_layout_layout_links",
+      "sourceDiff": "diff --git a/app/helpers/sessions_helper.rb b/app/helpers/sessions_helper.rb\nindex d3b65f7..fb4835f 100644\n--- a/app/helpers/sessions_helper.rb\n+++ b/app/helpers/sessions_helper.rb\n@@ -5,21 +5,52 @@ module SessionsHelper\n     session[:user_id] = user.id\n   end\n \n-  # Returns the current logged-in user (if any).\n+  # Remembers a user in a persistent session.\n+  def remember(user)\n+    user.remember\n+    cookies.permanent.encrypted[:user_id] = user.id\n+    cookies.permanent[:remember_token] = user.remember_token\n+  end\n+\n+  # Returns the user corresponding to the remember token cookie.\n   def current_user\n-    if session[:user_id]\n-      @current_user ||= User.find_by(id: session[:user_id])\n+    if (user_id = session[:user_id])\n+      @current_user ||= User.find_by(id: user_id)\n+    elsif (user_id = cookies.encrypted[:user_id])\n+      user = User.find_by(id: user_id)\n+      if user && user.authenticated?(:remember, cookies[:remember_token])\n+        log_in user\n+        @current_user = user\n+      end\n     end\n   end\n \n+  # Returns true if the given user is the current user.\n+  def current_user?(user)\n+    user == current_user\n+  end\n+\n   # Returns true if the user is logged in, false otherwise.\n   def logged_in?\n     !current_user.nil?\n   end\n \n+  # Forgets a persistent session.\n+  def forget(user)\n+    user.forget\n+    cookies.delete(:user_id)\n+    cookies.delete(:remember_token)\n+  end\n+\n   # Logs out the current user.\n   def log_out\n+    forget(current_user)\n     reset_session\n     @current_user = nil\n   end\n+\n+  # Stores the URL trying to be accessed.\n+  def store_location\n+    session[:forwarding_url] = request.original_url if request.get?\n+  end\n end\ndiff --git a/app/views/layouts/_header.html.erb b/app/views/layouts/_header.html.erb\nindex fe59272..03cfeee 100644\n--- a/app/views/layouts/_header.html.erb\n+++ b/app/views/layouts/_header.html.erb\n@@ -18,14 +18,14 @@\n         <li><%= link_to \"Home\", root_path %></li>\n         <li><%= link_to \"Help\", help_path %></li>\n         <% if logged_in? %>\n-          <li><%= link_to \"Users\", '#' %></li>\n+          <li><%= link_to \"Users\", users_path %></li>\n           <li class=\"dropdown\">\n             <a href=\"#\" class=\"dropdown-toggle\" data-toggle=\"dropdown\">\n               Account <b class=\"caret\"></b>\n             </a>\n             <ul class=\"dropdown-menu\">\n               <li><%= link_to \"Profile\", current_user %></li>\n-              <li><%= link_to \"Settings\", '#' %></li>\n+              <li><%= link_to \"Settings\", edit_user_path(current_user) %></li>\n               <li class=\"divider\"></li>\n               <li>\n                 <%= link_to \"Log out\", logout_path, method: :delete %>\n",
+      "sequenceDiagramDiff": "diff/minitest/Site_layout_layout_links.diff.sequence.json"
+    },
+    {
+      "appmap": "minitest/Static_pages_controller_should_get_about",
+      "sequenceDiagramDiff": "diff/minitest/Static_pages_controller_should_get_about.diff.sequence.json"
+    },
+    {
+      "appmap": "minitest/Static_pages_controller_should_get_contact",
+      "sourceDiff": "diff --git a/app/helpers/sessions_helper.rb b/app/helpers/sessions_helper.rb\nindex d3b65f7..fb4835f 100644\n--- a/app/helpers/sessions_helper.rb\n+++ b/app/helpers/sessions_helper.rb\n@@ -5,21 +5,52 @@ module SessionsHelper\n     session[:user_id] = user.id\n   end\n \n-  # Returns the current logged-in user (if any).\n+  # Remembers a user in a persistent session.\n+  def remember(user)\n+    user.remember\n+    cookies.permanent.encrypted[:user_id] = user.id\n+    cookies.permanent[:remember_token] = user.remember_token\n+  end\n+\n+  # Returns the user corresponding to the remember token cookie.\n   def current_user\n-    if session[:user_id]\n-      @current_user ||= User.find_by(id: session[:user_id])\n+    if (user_id = session[:user_id])\n+      @current_user ||= User.find_by(id: user_id)\n+    elsif (user_id = cookies.encrypted[:user_id])\n+      user = User.find_by(id: user_id)\n+      if user && user.authenticated?(:remember, cookies[:remember_token])\n+        log_in user\n+        @current_user = user\n+      end\n     end\n   end\n \n+  # Returns true if the given user is the current user.\n+  def current_user?(user)\n+    user == current_user\n+  end\n+\n   # Returns true if the user is logged in, false otherwise.\n   def logged_in?\n     !current_user.nil?\n   end\n \n+  # Forgets a persistent session.\n+  def forget(user)\n+    user.forget\n+    cookies.delete(:user_id)\n+    cookies.delete(:remember_token)\n+  end\n+\n   # Logs out the current user.\n   def log_out\n+    forget(current_user)\n     reset_session\n     @current_user = nil\n   end\n+\n+  # Stores the URL trying to be accessed.\n+  def store_location\n+    session[:forwarding_url] = request.original_url if request.get?\n+  end\n end\ndiff --git a/app/views/layouts/_header.html.erb b/app/views/layouts/_header.html.erb\nindex fe59272..03cfeee 100644\n--- a/app/views/layouts/_header.html.erb\n+++ b/app/views/layouts/_header.html.erb\n@@ -18,14 +18,14 @@\n         <li><%= link_to \"Home\", root_path %></li>\n         <li><%= link_to \"Help\", help_path %></li>\n         <% if logged_in? %>\n-          <li><%= link_to \"Users\", '#' %></li>\n+          <li><%= link_to \"Users\", users_path %></li>\n           <li class=\"dropdown\">\n             <a href=\"#\" class=\"dropdown-toggle\" data-toggle=\"dropdown\">\n               Account <b class=\"caret\"></b>\n             </a>\n             <ul class=\"dropdown-menu\">\n               <li><%= link_to \"Profile\", current_user %></li>\n-              <li><%= link_to \"Settings\", '#' %></li>\n+              <li><%= link_to \"Settings\", edit_user_path(current_user) %></li>\n               <li class=\"divider\"></li>\n               <li>\n                 <%= link_to \"Log out\", logout_path, method: :delete %>\n",
+      "sequenceDiagramDiff": "diff/minitest/Static_pages_controller_should_get_contact.diff.sequence.json"
+    },
+    {
+      "appmap": "minitest/Static_pages_controller_should_get_help",
+      "sourceDiff": "diff --git a/app/helpers/sessions_helper.rb b/app/helpers/sessions_helper.rb\nindex d3b65f7..fb4835f 100644\n--- a/app/helpers/sessions_helper.rb\n+++ b/app/helpers/sessions_helper.rb\n@@ -5,21 +5,52 @@ module SessionsHelper\n     session[:user_id] = user.id\n   end\n \n-  # Returns the current logged-in user (if any).\n+  # Remembers a user in a persistent session.\n+  def remember(user)\n+    user.remember\n+    cookies.permanent.encrypted[:user_id] = user.id\n+    cookies.permanent[:remember_token] = user.remember_token\n+  end\n+\n+  # Returns the user corresponding to the remember token cookie.\n   def current_user\n-    if session[:user_id]\n-      @current_user ||= User.find_by(id: session[:user_id])\n+    if (user_id = session[:user_id])\n+      @current_user ||= User.find_by(id: user_id)\n+    elsif (user_id = cookies.encrypted[:user_id])\n+      user = User.find_by(id: user_id)\n+      if user && user.authenticated?(:remember, cookies[:remember_token])\n+        log_in user\n+        @current_user = user\n+      end\n     end\n   end\n \n+  # Returns true if the given user is the current user.\n+  def current_user?(user)\n+    user == current_user\n+  end\n+\n   # Returns true if the user is logged in, false otherwise.\n   def logged_in?\n     !current_user.nil?\n   end\n \n+  # Forgets a persistent session.\n+  def forget(user)\n+    user.forget\n+    cookies.delete(:user_id)\n+    cookies.delete(:remember_token)\n+  end\n+\n   # Logs out the current user.\n   def log_out\n+    forget(current_user)\n     reset_session\n     @current_user = nil\n   end\n+\n+  # Stores the URL trying to be accessed.\n+  def store_location\n+    session[:forwarding_url] = request.original_url if request.get?\n+  end\n end\ndiff --git a/app/views/layouts/_header.html.erb b/app/views/layouts/_header.html.erb\nindex fe59272..03cfeee 100644\n--- a/app/views/layouts/_header.html.erb\n+++ b/app/views/layouts/_header.html.erb\n@@ -18,14 +18,14 @@\n         <li><%= link_to \"Home\", root_path %></li>\n         <li><%= link_to \"Help\", help_path %></li>\n         <% if logged_in? %>\n-          <li><%= link_to \"Users\", '#' %></li>\n+          <li><%= link_to \"Users\", users_path %></li>\n           <li class=\"dropdown\">\n             <a href=\"#\" class=\"dropdown-toggle\" data-toggle=\"dropdown\">\n               Account <b class=\"caret\"></b>\n             </a>\n             <ul class=\"dropdown-menu\">\n               <li><%= link_to \"Profile\", current_user %></li>\n-              <li><%= link_to \"Settings\", '#' %></li>\n+              <li><%= link_to \"Settings\", edit_user_path(current_user) %></li>\n               <li class=\"divider\"></li>\n               <li>\n                 <%= link_to \"Log out\", logout_path, method: :delete %>\n",
+      "sequenceDiagramDiff": "diff/minitest/Static_pages_controller_should_get_help.diff.sequence.json"
+    },
+    {
+      "appmap": "minitest/Static_pages_controller_should_get_home",
+      "sourceDiff": "diff --git a/app/helpers/sessions_helper.rb b/app/helpers/sessions_helper.rb\nindex d3b65f7..fb4835f 100644\n--- a/app/helpers/sessions_helper.rb\n+++ b/app/helpers/sessions_helper.rb\n@@ -5,21 +5,52 @@ module SessionsHelper\n     session[:user_id] = user.id\n   end\n \n-  # Returns the current logged-in user (if any).\n+  # Remembers a user in a persistent session.\n+  def remember(user)\n+    user.remember\n+    cookies.permanent.encrypted[:user_id] = user.id\n+    cookies.permanent[:remember_token] = user.remember_token\n+  end\n+\n+  # Returns the user corresponding to the remember token cookie.\n   def current_user\n-    if session[:user_id]\n-      @current_user ||= User.find_by(id: session[:user_id])\n+    if (user_id = session[:user_id])\n+      @current_user ||= User.find_by(id: user_id)\n+    elsif (user_id = cookies.encrypted[:user_id])\n+      user = User.find_by(id: user_id)\n+      if user && user.authenticated?(:remember, cookies[:remember_token])\n+        log_in user\n+        @current_user = user\n+      end\n     end\n   end\n \n+  # Returns true if the given user is the current user.\n+  def current_user?(user)\n+    user == current_user\n+  end\n+\n   # Returns true if the user is logged in, false otherwise.\n   def logged_in?\n     !current_user.nil?\n   end\n \n+  # Forgets a persistent session.\n+  def forget(user)\n+    user.forget\n+    cookies.delete(:user_id)\n+    cookies.delete(:remember_token)\n+  end\n+\n   # Logs out the current user.\n   def log_out\n+    forget(current_user)\n     reset_session\n     @current_user = nil\n   end\n+\n+  # Stores the URL trying to be accessed.\n+  def store_location\n+    session[:forwarding_url] = request.original_url if request.get?\n+  end\n end\ndiff --git a/app/views/layouts/_header.html.erb b/app/views/layouts/_header.html.erb\nindex fe59272..03cfeee 100644\n--- a/app/views/layouts/_header.html.erb\n+++ b/app/views/layouts/_header.html.erb\n@@ -18,14 +18,14 @@\n         <li><%= link_to \"Home\", root_path %></li>\n         <li><%= link_to \"Help\", help_path %></li>\n         <% if logged_in? %>\n-          <li><%= link_to \"Users\", '#' %></li>\n+          <li><%= link_to \"Users\", users_path %></li>\n           <li class=\"dropdown\">\n             <a href=\"#\" class=\"dropdown-toggle\" data-toggle=\"dropdown\">\n               Account <b class=\"caret\"></b>\n             </a>\n             <ul class=\"dropdown-menu\">\n               <li><%= link_to \"Profile\", current_user %></li>\n-              <li><%= link_to \"Settings\", '#' %></li>\n+              <li><%= link_to \"Settings\", edit_user_path(current_user) %></li>\n               <li class=\"divider\"></li>\n               <li>\n                 <%= link_to \"Log out\", logout_path, method: :delete %>\n",
+      "sequenceDiagramDiff": "diff/minitest/Static_pages_controller_should_get_home.diff.sequence.json"
+    },
+    {
+      "appmap": "minitest/Users_controller_should_get_new",
+      "sourceDiff": "diff --git a/app/controllers/users_controller.rb b/app/controllers/users_controller.rb\nindex 3532587..5acc97f 100644\n--- a/app/controllers/users_controller.rb\n+++ b/app/controllers/users_controller.rb\n@@ -1,4 +1,11 @@\n class UsersController < ApplicationController\n+  before_action :logged_in_user, only: [:index, :edit, :update, :destroy]\n+  before_action :correct_user,   only: [:edit, :update]\n+  before_action :admin_user,     only: :destroy\n+\n+  def index\n+    @users = User.paginate(page: params[:page])\n+  end\n \n   def show\n     @user = User.find(params[:id])\n@@ -11,18 +18,60 @@ class UsersController < ApplicationController\n   def create\n     @user = User.new(user_params)\n     if @user.save\n-      log_in @user\n-      flash[:success] = \"Welcome to the Sample App!\"\n-      redirect_to @user\n+      @user.send_activation_email\n+      flash[:info] = \"Please check your email to activate your account.\"\n+      redirect_to root_url\n     else\n       render 'new'\n     end\n   end\n \n+  def edit\n+    @user = User.find(params[:id])\n+  end\n+\n+  def update\n+    @user = User.find(params[:id])\n+    if @user.update(user_params)\n+      flash[:success] = \"Profile updated\"\n+      redirect_to @user\n+    else\n+      render 'edit'\n+    end\n+  end\n+\n+  def destroy\n+    User.find(params[:id]).destroy\n+    flash[:success] = \"User deleted\"\n+    redirect_to users_url\n+  end\n+\n   private\n \n     def user_params\n       params.require(:user).permit(:name, :email, :password,\n                                    :password_confirmation)\n     end\n+\n+    # Before filters\n+\n+    # Confirms a logged-in user.\n+    def logged_in_user\n+      unless logged_in?\n+        store_location\n+        flash[:danger] = \"Please log in.\"\n+        redirect_to login_url\n+      end\n+    end\n+\n+    # Confirms the correct user.\n+    def correct_user\n+      @user = User.find(params[:id])\n+      redirect_to(root_url) unless current_user?(@user)\n+    end\n+\n+    # Confirms an admin user.\n+    def admin_user\n+      redirect_to(root_url) unless current_user.admin?\n+    end\n end\ndiff --git a/app/helpers/sessions_helper.rb b/app/helpers/sessions_helper.rb\nindex d3b65f7..fb4835f 100644\n--- a/app/helpers/sessions_helper.rb\n+++ b/app/helpers/sessions_helper.rb\n@@ -5,21 +5,52 @@ module SessionsHelper\n     session[:user_id] = user.id\n   end\n \n-  # Returns the current logged-in user (if any).\n+  # Remembers a user in a persistent session.\n+  def remember(user)\n+    user.remember\n+    cookies.permanent.encrypted[:user_id] = user.id\n+    cookies.permanent[:remember_token] = user.remember_token\n+  end\n+\n+  # Returns the user corresponding to the remember token cookie.\n   def current_user\n-    if session[:user_id]\n-      @current_user ||= User.find_by(id: session[:user_id])\n+    if (user_id = session[:user_id])\n+      @current_user ||= User.find_by(id: user_id)\n+    elsif (user_id = cookies.encrypted[:user_id])\n+      user = User.find_by(id: user_id)\n+      if user && user.authenticated?(:remember, cookies[:remember_token])\n+        log_in user\n+        @current_user = user\n+      end\n     end\n   end\n \n+  # Returns true if the given user is the current user.\n+  def current_user?(user)\n+    user == current_user\n+  end\n+\n   # Returns true if the user is logged in, false otherwise.\n   def logged_in?\n     !current_user.nil?\n   end\n \n+  # Forgets a persistent session.\n+  def forget(user)\n+    user.forget\n+    cookies.delete(:user_id)\n+    cookies.delete(:remember_token)\n+  end\n+\n   # Logs out the current user.\n   def log_out\n+    forget(current_user)\n     reset_session\n     @current_user = nil\n   end\n+\n+  # Stores the URL trying to be accessed.\n+  def store_location\n+    session[:forwarding_url] = request.original_url if request.get?\n+  end\n end\ndiff --git a/app/views/layouts/_header.html.erb b/app/views/layouts/_header.html.erb\nindex fe59272..03cfeee 100644\n--- a/app/views/layouts/_header.html.erb\n+++ b/app/views/layouts/_header.html.erb\n@@ -18,14 +18,14 @@\n         <li><%= link_to \"Home\", root_path %></li>\n         <li><%= link_to \"Help\", help_path %></li>\n         <% if logged_in? %>\n-          <li><%= link_to \"Users\", '#' %></li>\n+          <li><%= link_to \"Users\", users_path %></li>\n           <li class=\"dropdown\">\n             <a href=\"#\" class=\"dropdown-toggle\" data-toggle=\"dropdown\">\n               Account <b class=\"caret\"></b>\n             </a>\n             <ul class=\"dropdown-menu\">\n               <li><%= link_to \"Profile\", current_user %></li>\n-              <li><%= link_to \"Settings\", '#' %></li>\n+              <li><%= link_to \"Settings\", edit_user_path(current_user) %></li>\n               <li class=\"divider\"></li>\n               <li>\n                 <%= link_to \"Log out\", logout_path, method: :delete %>\n",
+      "sequenceDiagramDiff": "diff/minitest/Users_controller_should_get_new.diff.sequence.json"
+    },
+    {
+      "appmap": "minitest/Users_login_login_with_valid_email_invalid_password",
+      "sourceDiff": "diff --git a/app/controllers/sessions_controller.rb b/app/controllers/sessions_controller.rb\nindex 313726f..1f5acd6 100644\n--- a/app/controllers/sessions_controller.rb\n+++ b/app/controllers/sessions_controller.rb\n@@ -6,9 +6,18 @@ class SessionsController < ApplicationController\n   def create\n     user = User.find_by(email: params[:session][:email].downcase)\n     if user && user.authenticate(params[:session][:password])\n-      reset_session\n-      log_in user\n-      redirect_to user\n+      if user.activated?\n+        forwarding_url = session[:forwarding_url]\n+        reset_session\n+        log_in user\n+        params[:session][:remember_me] == '1' ? remember(user) : forget(user)\n+        redirect_to forwarding_url || user\n+      else\n+        message  = \"Account not activated. \"\n+        message += \"Check your email for the activation link.\"\n+        flash[:warning] = message\n+        redirect_to root_url\n+      end\n     else\n       flash.now[:danger] = 'Invalid email/password combination'\n       render 'new'\n@@ -16,7 +25,7 @@ class SessionsController < ApplicationController\n   end\n \n   def destroy\n-    log_out\n+    log_out if logged_in?\n     redirect_to root_url\n   end\n end\ndiff --git a/app/helpers/sessions_helper.rb b/app/helpers/sessions_helper.rb\nindex d3b65f7..fb4835f 100644\n--- a/app/helpers/sessions_helper.rb\n+++ b/app/helpers/sessions_helper.rb\n@@ -5,21 +5,52 @@ module SessionsHelper\n     session[:user_id] = user.id\n   end\n \n-  # Returns the current logged-in user (if any).\n+  # Remembers a user in a persistent session.\n+  def remember(user)\n+    user.remember\n+    cookies.permanent.encrypted[:user_id] = user.id\n+    cookies.permanent[:remember_token] = user.remember_token\n+  end\n+\n+  # Returns the user corresponding to the remember token cookie.\n   def current_user\n-    if session[:user_id]\n-      @current_user ||= User.find_by(id: session[:user_id])\n+    if (user_id = session[:user_id])\n+      @current_user ||= User.find_by(id: user_id)\n+    elsif (user_id = cookies.encrypted[:user_id])\n+      user = User.find_by(id: user_id)\n+      if user && user.authenticated?(:remember, cookies[:remember_token])\n+        log_in user\n+        @current_user = user\n+      end\n     end\n   end\n \n+  # Returns true if the given user is the current user.\n+  def current_user?(user)\n+    user == current_user\n+  end\n+\n   # Returns true if the user is logged in, false otherwise.\n   def logged_in?\n     !current_user.nil?\n   end\n \n+  # Forgets a persistent session.\n+  def forget(user)\n+    user.forget\n+    cookies.delete(:user_id)\n+    cookies.delete(:remember_token)\n+  end\n+\n   # Logs out the current user.\n   def log_out\n+    forget(current_user)\n     reset_session\n     @current_user = nil\n   end\n+\n+  # Stores the URL trying to be accessed.\n+  def store_location\n+    session[:forwarding_url] = request.original_url if request.get?\n+  end\n end\ndiff --git a/app/views/layouts/_header.html.erb b/app/views/layouts/_header.html.erb\nindex fe59272..03cfeee 100644\n--- a/app/views/layouts/_header.html.erb\n+++ b/app/views/layouts/_header.html.erb\n@@ -18,14 +18,14 @@\n         <li><%= link_to \"Home\", root_path %></li>\n         <li><%= link_to \"Help\", help_path %></li>\n         <% if logged_in? %>\n-          <li><%= link_to \"Users\", '#' %></li>\n+          <li><%= link_to \"Users\", users_path %></li>\n           <li class=\"dropdown\">\n             <a href=\"#\" class=\"dropdown-toggle\" data-toggle=\"dropdown\">\n               Account <b class=\"caret\"></b>\n             </a>\n             <ul class=\"dropdown-menu\">\n               <li><%= link_to \"Profile\", current_user %></li>\n-              <li><%= link_to \"Settings\", '#' %></li>\n+              <li><%= link_to \"Settings\", edit_user_path(current_user) %></li>\n               <li class=\"divider\"></li>\n               <li>\n                 <%= link_to \"Log out\", logout_path, method: :delete %>\ndiff --git a/app/views/sessions/new.html.erb b/app/views/sessions/new.html.erb\nindex 17825a6..aedf6ce 100644\n--- a/app/views/sessions/new.html.erb\n+++ b/app/views/sessions/new.html.erb\n@@ -9,8 +9,14 @@\n       <%= f.email_field :email, class: 'form-control' %>\n \n       <%= f.label :password %>\n+      <%= link_to \"(forgot password)\", new_password_reset_path %>\n       <%= f.password_field :password, class: 'form-control' %>\n \n+      <%= f.label :remember_me, class: \"checkbox inline\" do %>\n+        <%= f.check_box :remember_me %>\n+        <span>Remember me on this computer</span>\n+      <% end %>\n+\n       <%= f.submit \"Log in\", class: \"btn btn-primary\" %>\n     <% end %>\n \n",
+      "sequenceDiagramDiff": "diff/minitest/Users_login_login_with_valid_email_invalid_password.diff.sequence.json"
+    },
+    {
+      "appmap": "minitest/Users_login_login_with_valid_information_followed_by_logout",
+      "sourceDiff": "diff --git a/app/controllers/sessions_controller.rb b/app/controllers/sessions_controller.rb\nindex 313726f..1f5acd6 100644\n--- a/app/controllers/sessions_controller.rb\n+++ b/app/controllers/sessions_controller.rb\n@@ -6,9 +6,18 @@ class SessionsController < ApplicationController\n   def create\n     user = User.find_by(email: params[:session][:email].downcase)\n     if user && user.authenticate(params[:session][:password])\n-      reset_session\n-      log_in user\n-      redirect_to user\n+      if user.activated?\n+        forwarding_url = session[:forwarding_url]\n+        reset_session\n+        log_in user\n+        params[:session][:remember_me] == '1' ? remember(user) : forget(user)\n+        redirect_to forwarding_url || user\n+      else\n+        message  = \"Account not activated. \"\n+        message += \"Check your email for the activation link.\"\n+        flash[:warning] = message\n+        redirect_to root_url\n+      end\n     else\n       flash.now[:danger] = 'Invalid email/password combination'\n       render 'new'\n@@ -16,7 +25,7 @@ class SessionsController < ApplicationController\n   end\n \n   def destroy\n-    log_out\n+    log_out if logged_in?\n     redirect_to root_url\n   end\n end\ndiff --git a/app/controllers/users_controller.rb b/app/controllers/users_controller.rb\nindex 3532587..5acc97f 100644\n--- a/app/controllers/users_controller.rb\n+++ b/app/controllers/users_controller.rb\n@@ -1,4 +1,11 @@\n class UsersController < ApplicationController\n+  before_action :logged_in_user, only: [:index, :edit, :update, :destroy]\n+  before_action :correct_user,   only: [:edit, :update]\n+  before_action :admin_user,     only: :destroy\n+\n+  def index\n+    @users = User.paginate(page: params[:page])\n+  end\n \n   def show\n     @user = User.find(params[:id])\n@@ -11,18 +18,60 @@ class UsersController < ApplicationController\n   def create\n     @user = User.new(user_params)\n     if @user.save\n-      log_in @user\n-      flash[:success] = \"Welcome to the Sample App!\"\n-      redirect_to @user\n+      @user.send_activation_email\n+      flash[:info] = \"Please check your email to activate your account.\"\n+      redirect_to root_url\n     else\n       render 'new'\n     end\n   end\n \n+  def edit\n+    @user = User.find(params[:id])\n+  end\n+\n+  def update\n+    @user = User.find(params[:id])\n+    if @user.update(user_params)\n+      flash[:success] = \"Profile updated\"\n+      redirect_to @user\n+    else\n+      render 'edit'\n+    end\n+  end\n+\n+  def destroy\n+    User.find(params[:id]).destroy\n+    flash[:success] = \"User deleted\"\n+    redirect_to users_url\n+  end\n+\n   private\n \n     def user_params\n       params.require(:user).permit(:name, :email, :password,\n                                    :password_confirmation)\n     end\n+\n+    # Before filters\n+\n+    # Confirms a logged-in user.\n+    def logged_in_user\n+      unless logged_in?\n+        store_location\n+        flash[:danger] = \"Please log in.\"\n+        redirect_to login_url\n+      end\n+    end\n+\n+    # Confirms the correct user.\n+    def correct_user\n+      @user = User.find(params[:id])\n+      redirect_to(root_url) unless current_user?(@user)\n+    end\n+\n+    # Confirms an admin user.\n+    def admin_user\n+      redirect_to(root_url) unless current_user.admin?\n+    end\n end\ndiff --git a/app/helpers/sessions_helper.rb b/app/helpers/sessions_helper.rb\nindex d3b65f7..fb4835f 100644\n--- a/app/helpers/sessions_helper.rb\n+++ b/app/helpers/sessions_helper.rb\n@@ -5,21 +5,52 @@ module SessionsHelper\n     session[:user_id] = user.id\n   end\n \n-  # Returns the current logged-in user (if any).\n+  # Remembers a user in a persistent session.\n+  def remember(user)\n+    user.remember\n+    cookies.permanent.encrypted[:user_id] = user.id\n+    cookies.permanent[:remember_token] = user.remember_token\n+  end\n+\n+  # Returns the user corresponding to the remember token cookie.\n   def current_user\n-    if session[:user_id]\n-      @current_user ||= User.find_by(id: session[:user_id])\n+    if (user_id = session[:user_id])\n+      @current_user ||= User.find_by(id: user_id)\n+    elsif (user_id = cookies.encrypted[:user_id])\n+      user = User.find_by(id: user_id)\n+      if user && user.authenticated?(:remember, cookies[:remember_token])\n+        log_in user\n+        @current_user = user\n+      end\n     end\n   end\n \n+  # Returns true if the given user is the current user.\n+  def current_user?(user)\n+    user == current_user\n+  end\n+\n   # Returns true if the user is logged in, false otherwise.\n   def logged_in?\n     !current_user.nil?\n   end\n \n+  # Forgets a persistent session.\n+  def forget(user)\n+    user.forget\n+    cookies.delete(:user_id)\n+    cookies.delete(:remember_token)\n+  end\n+\n   # Logs out the current user.\n   def log_out\n+    forget(current_user)\n     reset_session\n     @current_user = nil\n   end\n+\n+  # Stores the URL trying to be accessed.\n+  def store_location\n+    session[:forwarding_url] = request.original_url if request.get?\n+  end\n end\ndiff --git a/app/helpers/users_helper.rb b/app/helpers/users_helper.rb\nindex 8384b23..b589bd8 100644\n--- a/app/helpers/users_helper.rb\n+++ b/app/helpers/users_helper.rb\n@@ -1,9 +1,10 @@\n module UsersHelper\n \n   # Returns the Gravatar for the given user.\n-  def gravatar_for(user)\n+  def gravatar_for(user, options = { size: 80 })\n+    size         = options[:size]\n     gravatar_id  = Digest::MD5::hexdigest(user.email.downcase)\n-    gravatar_url = \"https://secure.gravatar.com/avatar/#{gravatar_id}\"\n+    gravatar_url = \"https://secure.gravatar.com/avatar/#{gravatar_id}?s=#{size}\"\n     image_tag(gravatar_url, alt: user.name, class: \"gravatar\")\n   end\n end\ndiff --git a/app/models/user.rb b/app/models/user.rb\nindex 95f0c1e..5af3285 100644\n--- a/app/models/user.rb\n+++ b/app/models/user.rb\n@@ -1,12 +1,14 @@\n class User < ApplicationRecord\n-  before_save { self.email = email.downcase }\n+  attr_accessor :remember_token, :activation_token, :reset_token\n+  before_save   :downcase_email\n+  before_create :create_activation_digest\n   validates :name,  presence: true, length: { maximum: 50 }\n   VALID_EMAIL_REGEX = /\\A[\\w+\\-.]+@[a-z\\d\\-.]+\\.[a-z]+\\z/i\n   validates :email, presence: true, length: { maximum: 255 },\n                     format: { with: VALID_EMAIL_REGEX },\n                     uniqueness: true\n   has_secure_password\n-  validates :password, presence: true, length: { minimum: 6 }\n+  validates :password, presence: true, length: { minimum: 6 }, allow_nil: true\n \n   # Returns the hash digest of the given string.\n   def User.digest(string)\n@@ -14,4 +16,68 @@ class User < ApplicationRecord\n                                                   BCrypt::Engine.cost\n     BCrypt::Password.create(string, cost: cost)\n   end\n+\n+  # Returns a random token.\n+  def User.new_token\n+    SecureRandom.urlsafe_base64\n+  end\n+\n+  # Remembers a user in the database for use in persistent sessions.\n+  def remember\n+    self.remember_token = User.new_token\n+    update_attribute(:remember_digest, User.digest(remember_token))\n+  end\n+\n+  # Returns true if the given token matches the digest.\n+  def authenticated?(attribute, token)\n+    digest = send(\"#{attribute}_digest\")\n+    return false if digest.nil?\n+    BCrypt::Password.new(digest).is_password?(token)\n+  end\n+\n+  # Forgets a user.\n+  def forget\n+    update_attribute(:remember_digest, nil)\n+  end\n+\n+  # Activates an account.\n+  def activate\n+    update_attribute(:activated,    true)\n+    update_attribute(:activated_at, Time.zone.now)\n+  end\n+\n+  # Sends activation email.\n+  def send_activation_email\n+    UserMailer.account_activation(self).deliver_now\n+  end\n+\n+  # Sets the password reset attributes.\n+  def create_reset_digest\n+    self.reset_token = User.new_token\n+    update_attribute(:reset_digest,  User.digest(reset_token))\n+    update_attribute(:reset_sent_at, Time.zone.now)\n+  end\n+\n+  # Sends password reset email.\n+  def send_password_reset_email\n+    UserMailer.password_reset(self).deliver_now\n+  end\n+\n+  # Returns true if a password reset has expired.\n+  def password_reset_expired?\n+    reset_sent_at < 2.hours.ago\n+  end\n+  \n+  private\n+\n+    # Converts email to all lower-case.\n+    def downcase_email\n+      self.email = email.downcase\n+    end\n+\n+    # Creates and assigns the activation token and digest.\n+    def create_activation_digest\n+      self.activation_token  = User.new_token\n+      self.activation_digest = User.digest(activation_token)\n+    end\n end\ndiff --git a/app/views/layouts/_header.html.erb b/app/views/layouts/_header.html.erb\nindex fe59272..03cfeee 100644\n--- a/app/views/layouts/_header.html.erb\n+++ b/app/views/layouts/_header.html.erb\n@@ -18,14 +18,14 @@\n         <li><%= link_to \"Home\", root_path %></li>\n         <li><%= link_to \"Help\", help_path %></li>\n         <% if logged_in? %>\n-          <li><%= link_to \"Users\", '#' %></li>\n+          <li><%= link_to \"Users\", users_path %></li>\n           <li class=\"dropdown\">\n             <a href=\"#\" class=\"dropdown-toggle\" data-toggle=\"dropdown\">\n               Account <b class=\"caret\"></b>\n             </a>\n             <ul class=\"dropdown-menu\">\n               <li><%= link_to \"Profile\", current_user %></li>\n-              <li><%= link_to \"Settings\", '#' %></li>\n+              <li><%= link_to \"Settings\", edit_user_path(current_user) %></li>\n               <li class=\"divider\"></li>\n               <li>\n                 <%= link_to \"Log out\", logout_path, method: :delete %>\ndiff --git a/app/views/sessions/new.html.erb b/app/views/sessions/new.html.erb\nindex 17825a6..aedf6ce 100644\n--- a/app/views/sessions/new.html.erb\n+++ b/app/views/sessions/new.html.erb\n@@ -9,8 +9,14 @@\n       <%= f.email_field :email, class: 'form-control' %>\n \n       <%= f.label :password %>\n+      <%= link_to \"(forgot password)\", new_password_reset_path %>\n       <%= f.password_field :password, class: 'form-control' %>\n \n+      <%= f.label :remember_me, class: \"checkbox inline\" do %>\n+        <%= f.check_box :remember_me %>\n+        <span>Remember me on this computer</span>\n+      <% end %>\n+\n       <%= f.submit \"Log in\", class: \"btn btn-primary\" %>\n     <% end %>\n \n",
+      "sequenceDiagramDiff": "diff/minitest/Users_login_login_with_valid_information_followed_by_logout.diff.sequence.json"
+    },
+    {
+      "appmap": "minitest/Users_signup_invalid_signup_information",
+      "sourceDiff": "diff --git a/app/controllers/users_controller.rb b/app/controllers/users_controller.rb\nindex 3532587..5acc97f 100644\n--- a/app/controllers/users_controller.rb\n+++ b/app/controllers/users_controller.rb\n@@ -1,4 +1,11 @@\n class UsersController < ApplicationController\n+  before_action :logged_in_user, only: [:index, :edit, :update, :destroy]\n+  before_action :correct_user,   only: [:edit, :update]\n+  before_action :admin_user,     only: :destroy\n+\n+  def index\n+    @users = User.paginate(page: params[:page])\n+  end\n \n   def show\n     @user = User.find(params[:id])\n@@ -11,18 +18,60 @@ class UsersController < ApplicationController\n   def create\n     @user = User.new(user_params)\n     if @user.save\n-      log_in @user\n-      flash[:success] = \"Welcome to the Sample App!\"\n-      redirect_to @user\n+      @user.send_activation_email\n+      flash[:info] = \"Please check your email to activate your account.\"\n+      redirect_to root_url\n     else\n       render 'new'\n     end\n   end\n \n+  def edit\n+    @user = User.find(params[:id])\n+  end\n+\n+  def update\n+    @user = User.find(params[:id])\n+    if @user.update(user_params)\n+      flash[:success] = \"Profile updated\"\n+      redirect_to @user\n+    else\n+      render 'edit'\n+    end\n+  end\n+\n+  def destroy\n+    User.find(params[:id]).destroy\n+    flash[:success] = \"User deleted\"\n+    redirect_to users_url\n+  end\n+\n   private\n \n     def user_params\n       params.require(:user).permit(:name, :email, :password,\n                                    :password_confirmation)\n     end\n+\n+    # Before filters\n+\n+    # Confirms a logged-in user.\n+    def logged_in_user\n+      unless logged_in?\n+        store_location\n+        flash[:danger] = \"Please log in.\"\n+        redirect_to login_url\n+      end\n+    end\n+\n+    # Confirms the correct user.\n+    def correct_user\n+      @user = User.find(params[:id])\n+      redirect_to(root_url) unless current_user?(@user)\n+    end\n+\n+    # Confirms an admin user.\n+    def admin_user\n+      redirect_to(root_url) unless current_user.admin?\n+    end\n end\ndiff --git a/app/helpers/sessions_helper.rb b/app/helpers/sessions_helper.rb\nindex d3b65f7..fb4835f 100644\n--- a/app/helpers/sessions_helper.rb\n+++ b/app/helpers/sessions_helper.rb\n@@ -5,21 +5,52 @@ module SessionsHelper\n     session[:user_id] = user.id\n   end\n \n-  # Returns the current logged-in user (if any).\n+  # Remembers a user in a persistent session.\n+  def remember(user)\n+    user.remember\n+    cookies.permanent.encrypted[:user_id] = user.id\n+    cookies.permanent[:remember_token] = user.remember_token\n+  end\n+\n+  # Returns the user corresponding to the remember token cookie.\n   def current_user\n-    if session[:user_id]\n-      @current_user ||= User.find_by(id: session[:user_id])\n+    if (user_id = session[:user_id])\n+      @current_user ||= User.find_by(id: user_id)\n+    elsif (user_id = cookies.encrypted[:user_id])\n+      user = User.find_by(id: user_id)\n+      if user && user.authenticated?(:remember, cookies[:remember_token])\n+        log_in user\n+        @current_user = user\n+      end\n     end\n   end\n \n+  # Returns true if the given user is the current user.\n+  def current_user?(user)\n+    user == current_user\n+  end\n+\n   # Returns true if the user is logged in, false otherwise.\n   def logged_in?\n     !current_user.nil?\n   end\n \n+  # Forgets a persistent session.\n+  def forget(user)\n+    user.forget\n+    cookies.delete(:user_id)\n+    cookies.delete(:remember_token)\n+  end\n+\n   # Logs out the current user.\n   def log_out\n+    forget(current_user)\n     reset_session\n     @current_user = nil\n   end\n+\n+  # Stores the URL trying to be accessed.\n+  def store_location\n+    session[:forwarding_url] = request.original_url if request.get?\n+  end\n end\ndiff --git a/app/views/layouts/_header.html.erb b/app/views/layouts/_header.html.erb\nindex fe59272..03cfeee 100644\n--- a/app/views/layouts/_header.html.erb\n+++ b/app/views/layouts/_header.html.erb\n@@ -18,14 +18,14 @@\n         <li><%= link_to \"Home\", root_path %></li>\n         <li><%= link_to \"Help\", help_path %></li>\n         <% if logged_in? %>\n-          <li><%= link_to \"Users\", '#' %></li>\n+          <li><%= link_to \"Users\", users_path %></li>\n           <li class=\"dropdown\">\n             <a href=\"#\" class=\"dropdown-toggle\" data-toggle=\"dropdown\">\n               Account <b class=\"caret\"></b>\n             </a>\n             <ul class=\"dropdown-menu\">\n               <li><%= link_to \"Profile\", current_user %></li>\n-              <li><%= link_to \"Settings\", '#' %></li>\n+              <li><%= link_to \"Settings\", edit_user_path(current_user) %></li>\n               <li class=\"divider\"></li>\n               <li>\n                 <%= link_to \"Log out\", logout_path, method: :delete %>\n",
+      "sequenceDiagramDiff": "diff/minitest/Users_signup_invalid_signup_information.diff.sequence.json"
+    }
+  ],
+  "newFindings": [
+    {
+      "appMapFile": "./minitest/Password_resets_password_resets.appmap.json",
+      "checkId": "exec-of-untrusted-command",
+      "ruleId": "exec-of-untrusted-command",
+      "ruleTitle": "Execution of untrusted system command",
+      "event": {
+        "id": 845,
+        "event": "call",
+        "thread_id": 46982486612300,
+        "defined_class": "Open3",
+        "method_id": "capture3",
+        "path": "/opt/hostedtoolcache/Ruby/2.6.3/x64/lib/ruby/2.6.0/open3.rb",
+        "lineno": 271,
+        "static": true,
+        "parameters": [
+          {
+            "name": "cmd",
+            "class": "Array",
+            "object_id": 46982538125800,
+            "value": "[{WEBPACKER_ASSET_HOST=>, WEBPACKER_RELATIVE_URL_ROOT=>}, /opt/hostedtoolcache/Ruby/2.6.3/x64/bin/ruby ./bin/webpack, {:chdir=>/home/runner/work/sample_app_6th_ed/sample_app_6th_ed}]",
+            "kind": "rest",
+            "size": 3
+          }
+        ],
+        "receiver": {
+          "class": "Module",
+          "object_id": 46982501624100,
+          "value": "Open3"
+        }
+      },
+      "hash": "cf9b19871c1f7912db1eb5081dc8d1450c45f1299a18e769210c9b2f6694b61d",
+      "hash_v2": "bcf3e681450ff60df77e3bb5a3278ad6554b7819b6ba4dbc525a9c4d51adabd6",
+      "stack": [
+        "/opt/hostedtoolcache/Ruby/2.6.3/x64/lib/ruby/2.6.0/open3.rb:271",
+        "app/views/password_resets/new.html.erb",
+        "/opt/hostedtoolcache/Ruby/2.6.3/x64/lib/ruby/gems/2.6.0/gems/actionpack-6.0.3.2/lib/action_controller/metal/renderers.rb:141",
+        "/opt/hostedtoolcache/Ruby/2.6.3/x64/lib/ruby/gems/2.6.0/gems/actionpack-6.0.3.2/lib/action_controller/metal/instrumentation.rb:19"
+      ],
+      "scope": {
+        "id": 225,
+        "event": "call",
+        "thread_id": 46982486612300,
+        "http_server_request": {
+          "request_method": "GET",
+          "path_info": "/password_resets/new",
+          "normalized_path_info": "/password_resets/new",
+          "headers": {
+            "Host": "www.example.com",
+            "Accept": "text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5",
+            "Content-Length": "0"
+          }
+        },
+        "message": [
+          {
+            "name": "controller",
+            "class": "String",
+            "value": "password_resets",
+            "object_id": 46982509570800
+          },
+          {
+            "name": "action",
+            "class": "String",
+            "value": "new",
+            "object_id": 46982486760580
+          }
+        ]
+      },
+      "message": "Open3.capture3 executes an untrusted command string",
+      "relatedEvents": [
+        {
+          "id": 845,
+          "event": "call",
+          "thread_id": 46982486612300,
+          "defined_class": "Open3",
+          "method_id": "capture3",
+          "path": "/opt/hostedtoolcache/Ruby/2.6.3/x64/lib/ruby/2.6.0/open3.rb",
+          "lineno": 271,
+          "static": true,
+          "parameters": [
+            {
+              "name": "cmd",
+              "class": "Array",
+              "object_id": 46982538125800,
+              "value": "[{WEBPACKER_ASSET_HOST=>, WEBPACKER_RELATIVE_URL_ROOT=>}, /opt/hostedtoolcache/Ruby/2.6.3/x64/bin/ruby ./bin/webpack, {:chdir=>/home/runner/work/sample_app_6th_ed/sample_app_6th_ed}]",
+              "kind": "rest",
+              "size": 3
+            }
+          ],
+          "receiver": {
+            "class": "Module",
+            "object_id": 46982501624100,
+            "value": "Open3"
+          }
+        }
+      ],
+      "impactDomain": "Security",
+      "participatingEvents": {}
+    },
+    {
+      "appMapFile": "./minitest/Users_signup_valid_signup_information_with_account_activation.appmap.json",
+      "checkId": "update-in-get-request",
+      "ruleId": "update-in-get-request",
+      "ruleTitle": "Data update performed in GET or HEAD request",
+      "event": {
+        "id": 857,
+        "event": "call",
+        "thread_id": 46982486612300,
+        "sql_query": {
+          "sql": "UPDATE \"users\" SET \"activated\" = ?, \"updated_at\" = ? WHERE \"users\".\"id\" = ?",
+          "database_type": "sqlite"
+        }
+      },
+      "hash": "085250d14b4eda3fc82725f4216a9f0f6732f09f97bfc4ac9cdc2ca89fbfbfb3",
+      "hash_v2": "0cd8e6544a38bc99297dcb906524ffa7cbdd71cad1d8e2b8b8056ffc84b0d4fe",
+      "stack": [
+        "app/models/user.rb:44",
+        "app/controllers/account_activations_controller.rb:3",
+        "/opt/hostedtoolcache/Ruby/2.6.3/x64/lib/ruby/gems/2.6.0/gems/actionpack-6.0.3.2/lib/action_controller/metal/instrumentation.rb:19"
+      ],
+      "scope": {
+        "id": 799,
+        "event": "call",
+        "thread_id": 46982486612300,
+        "http_server_request": {
+          "request_method": "GET",
+          "path_info": "/account_activations/b0n_ZzdzvQa0JCJLeBSG2w/edit",
+          "normalized_path_info": "/account_activations/{id}/edit",
+          "headers": {
+            "Host": "www.example.com",
+            "Accept": "text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5",
+            "Cookie": "_sample_app_session=JdxKkraIuJpE6y%2BHgVAdJ2G8AXTyDfVXsQ0AkFFvmA9bH3na9EyDZooHRhZmTInsBcGDVSnNQVf%2ByDKXdkJKa1UJLBMfaNp%2BHc3TvWrNCvhuSyZ9KVcKshoKmOJez7rUJsU3O2ArNKDSnMMeNmlsn7T8lHhi%2FA6rf%2Fv5tjGLapIUr%2FnMSiWySuCF7LSK37QL2QZIsO%2BTa4dbv5jz%2Fees%2FzIckCZz7GKqHrYM%2BGyet9%2F2yz8YP3HubLOYOD%2FgMTAYFmE%2BpTrHmfu0mMBIc9MAB8z5B2Aay%2F6mbnASzJVziJVmnJFNG9vq--WQujJGjwX6x6LQV6--bjYFPrcn4B2yFKE1Pzn8nQ%3D%3D",
+            "Content-Length": "0"
+          }
+        },
+        "message": [
+          {
+            "name": "email",
+            "class": "String",
+            "value": "user@example.com",
+            "object_id": 46982538008980
+          },
+          {
+            "name": "controller",
+            "class": "String",
+            "value": "account_activations",
+            "object_id": 46982509571240
+          },
+          {
+            "name": "action",
+            "class": "String",
+            "value": "edit",
+            "object_id": 46982498859060
+          },
+          {
+            "name": "id",
+            "class": "String",
+            "value": "b0n_ZzdzvQa0JCJLeBSG2w",
+            "object_id": 46982537984680
+          }
+        ]
+      },
+      "message": "Data update performed in HTTP request GET /account_activations/{id}/edit: UPDATE \"users\" SET \"activated\" = ?, \"updated_at\" = ? WHERE \"users\".\"id\" = ?",
+      "relatedEvents": [
+        {
+          "id": 857,
+          "event": "call",
+          "thread_id": 46982486612300,
+          "sql_query": {
+            "sql": "UPDATE \"users\" SET \"activated\" = ?, \"updated_at\" = ? WHERE \"users\".\"id\" = ?",
+            "database_type": "sqlite"
+          }
+        },
+        {
+          "id": 799,
+          "event": "call",
+          "thread_id": 46982486612300,
+          "http_server_request": {
+            "request_method": "GET",
+            "path_info": "/account_activations/b0n_ZzdzvQa0JCJLeBSG2w/edit",
+            "normalized_path_info": "/account_activations/{id}/edit",
+            "headers": {
+              "Host": "www.example.com",
+              "Accept": "text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5",
+              "Cookie": "_sample_app_session=JdxKkraIuJpE6y%2BHgVAdJ2G8AXTyDfVXsQ0AkFFvmA9bH3na9EyDZooHRhZmTInsBcGDVSnNQVf%2ByDKXdkJKa1UJLBMfaNp%2BHc3TvWrNCvhuSyZ9KVcKshoKmOJez7rUJsU3O2ArNKDSnMMeNmlsn7T8lHhi%2FA6rf%2Fv5tjGLapIUr%2FnMSiWySuCF7LSK37QL2QZIsO%2BTa4dbv5jz%2Fees%2FzIckCZz7GKqHrYM%2BGyet9%2F2yz8YP3HubLOYOD%2FgMTAYFmE%2BpTrHmfu0mMBIc9MAB8z5B2Aay%2F6mbnASzJVziJVmnJFNG9vq--WQujJGjwX6x6LQV6--bjYFPrcn4B2yFKE1Pzn8nQ%3D%3D",
+              "Content-Length": "0"
+            }
+          },
+          "message": [
+            {
+              "name": "email",
+              "class": "String",
+              "value": "user@example.com",
+              "object_id": 46982538008980
+            },
+            {
+              "name": "controller",
+              "class": "String",
+              "value": "account_activations",
+              "object_id": 46982509571240
+            },
+            {
+              "name": "action",
+              "class": "String",
+              "value": "edit",
+              "object_id": 46982498859060
+            },
+            {
+              "name": "id",
+              "class": "String",
+              "value": "b0n_ZzdzvQa0JCJLeBSG2w",
+              "object_id": 46982537984680
+            }
+          ]
+        }
+      ],
+      "impactDomain": "Maintainability",
+      "participatingEvents": {
+        "request": {
+          "id": 799,
+          "event": "call",
+          "thread_id": 46982486612300,
+          "http_server_request": {
+            "request_method": "GET",
+            "path_info": "/account_activations/b0n_ZzdzvQa0JCJLeBSG2w/edit",
+            "normalized_path_info": "/account_activations/{id}/edit",
+            "headers": {
+              "Host": "www.example.com",
+              "Accept": "text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5",
+              "Cookie": "_sample_app_session=JdxKkraIuJpE6y%2BHgVAdJ2G8AXTyDfVXsQ0AkFFvmA9bH3na9EyDZooHRhZmTInsBcGDVSnNQVf%2ByDKXdkJKa1UJLBMfaNp%2BHc3TvWrNCvhuSyZ9KVcKshoKmOJez7rUJsU3O2ArNKDSnMMeNmlsn7T8lHhi%2FA6rf%2Fv5tjGLapIUr%2FnMSiWySuCF7LSK37QL2QZIsO%2BTa4dbv5jz%2Fees%2FzIckCZz7GKqHrYM%2BGyet9%2F2yz8YP3HubLOYOD%2FgMTAYFmE%2BpTrHmfu0mMBIc9MAB8z5B2Aay%2F6mbnASzJVziJVmnJFNG9vq--WQujJGjwX6x6LQV6--bjYFPrcn4B2yFKE1Pzn8nQ%3D%3D",
+              "Content-Length": "0"
+            }
+          },
+          "message": [
+            {
+              "name": "email",
+              "class": "String",
+              "value": "user@example.com",
+              "object_id": 46982538008980
+            },
+            {
+              "name": "controller",
+              "class": "String",
+              "value": "account_activations",
+              "object_id": 46982509571240
+            },
+            {
+              "name": "action",
+              "class": "String",
+              "value": "edit",
+              "object_id": 46982498859060
+            },
+            {
+              "name": "id",
+              "class": "String",
+              "value": "b0n_ZzdzvQa0JCJLeBSG2w",
+              "object_id": 46982537984680
+            }
+          ]
+        }
+      }
+    },
+    {
+      "appMapFile": "./minitest/Users_signup_valid_signup_information_with_account_activation.appmap.json",
+      "checkId": "update-in-get-request",
+      "ruleId": "update-in-get-request",
+      "ruleTitle": "Data update performed in GET or HEAD request",
+      "event": {
+        "id": 873,
+        "event": "call",
+        "thread_id": 46982486612300,
+        "sql_query": {
+          "sql": "UPDATE \"users\" SET \"updated_at\" = ?, \"activated_at\" = ? WHERE \"users\".\"id\" = ?",
+          "database_type": "sqlite"
+        }
+      },
+      "hash": "60031256ab72237f92296fefba2733dc85d36c4bf7f5f31a558286117ca66e43",
+      "hash_v2": "dec2f1f3aeaf200346646793c43adbd4ae255cc04fb2b9d09d0a4b24864ab924",
+      "stack": [
+        "app/models/user.rb:44",
+        "app/controllers/account_activations_controller.rb:3",
+        "/opt/hostedtoolcache/Ruby/2.6.3/x64/lib/ruby/gems/2.6.0/gems/actionpack-6.0.3.2/lib/action_controller/metal/instrumentation.rb:19"
+      ],
+      "scope": {
+        "id": 799,
+        "event": "call",
+        "thread_id": 46982486612300,
+        "http_server_request": {
+          "request_method": "GET",
+          "path_info": "/account_activations/b0n_ZzdzvQa0JCJLeBSG2w/edit",
+          "normalized_path_info": "/account_activations/{id}/edit",
+          "headers": {
+            "Host": "www.example.com",
+            "Accept": "text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5",
+            "Cookie": "_sample_app_session=JdxKkraIuJpE6y%2BHgVAdJ2G8AXTyDfVXsQ0AkFFvmA9bH3na9EyDZooHRhZmTInsBcGDVSnNQVf%2ByDKXdkJKa1UJLBMfaNp%2BHc3TvWrNCvhuSyZ9KVcKshoKmOJez7rUJsU3O2ArNKDSnMMeNmlsn7T8lHhi%2FA6rf%2Fv5tjGLapIUr%2FnMSiWySuCF7LSK37QL2QZIsO%2BTa4dbv5jz%2Fees%2FzIckCZz7GKqHrYM%2BGyet9%2F2yz8YP3HubLOYOD%2FgMTAYFmE%2BpTrHmfu0mMBIc9MAB8z5B2Aay%2F6mbnASzJVziJVmnJFNG9vq--WQujJGjwX6x6LQV6--bjYFPrcn4B2yFKE1Pzn8nQ%3D%3D",
+            "Content-Length": "0"
+          }
+        },
+        "message": [
+          {
+            "name": "email",
+            "class": "String",
+            "value": "user@example.com",
+            "object_id": 46982538008980
+          },
+          {
+            "name": "controller",
+            "class": "String",
+            "value": "account_activations",
+            "object_id": 46982509571240
+          },
+          {
+            "name": "action",
+            "class": "String",
+            "value": "edit",
+            "object_id": 46982498859060
+          },
+          {
+            "name": "id",
+            "class": "String",
+            "value": "b0n_ZzdzvQa0JCJLeBSG2w",
+            "object_id": 46982537984680
+          }
+        ]
+      },
+      "message": "Data update performed in HTTP request GET /account_activations/{id}/edit: UPDATE \"users\" SET \"updated_at\" = ?, \"activated_at\" = ? WHERE \"users\".\"id\" = ?",
+      "relatedEvents": [
+        {
+          "id": 873,
+          "event": "call",
+          "thread_id": 46982486612300,
+          "sql_query": {
+            "sql": "UPDATE \"users\" SET \"updated_at\" = ?, \"activated_at\" = ? WHERE \"users\".\"id\" = ?",
+            "database_type": "sqlite"
+          }
+        },
+        {
+          "id": 799,
+          "event": "call",
+          "thread_id": 46982486612300,
+          "http_server_request": {
+            "request_method": "GET",
+            "path_info": "/account_activations/b0n_ZzdzvQa0JCJLeBSG2w/edit",
+            "normalized_path_info": "/account_activations/{id}/edit",
+            "headers": {
+              "Host": "www.example.com",
+              "Accept": "text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5",
+              "Cookie": "_sample_app_session=JdxKkraIuJpE6y%2BHgVAdJ2G8AXTyDfVXsQ0AkFFvmA9bH3na9EyDZooHRhZmTInsBcGDVSnNQVf%2ByDKXdkJKa1UJLBMfaNp%2BHc3TvWrNCvhuSyZ9KVcKshoKmOJez7rUJsU3O2ArNKDSnMMeNmlsn7T8lHhi%2FA6rf%2Fv5tjGLapIUr%2FnMSiWySuCF7LSK37QL2QZIsO%2BTa4dbv5jz%2Fees%2FzIckCZz7GKqHrYM%2BGyet9%2F2yz8YP3HubLOYOD%2FgMTAYFmE%2BpTrHmfu0mMBIc9MAB8z5B2Aay%2F6mbnASzJVziJVmnJFNG9vq--WQujJGjwX6x6LQV6--bjYFPrcn4B2yFKE1Pzn8nQ%3D%3D",
+              "Content-Length": "0"
+            }
+          },
+          "message": [
+            {
+              "name": "email",
+              "class": "String",
+              "value": "user@example.com",
+              "object_id": 46982538008980
+            },
+            {
+              "name": "controller",
+              "class": "String",
+              "value": "account_activations",
+              "object_id": 46982509571240
+            },
+            {
+              "name": "action",
+              "class": "String",
+              "value": "edit",
+              "object_id": 46982498859060
+            },
+            {
+              "name": "id",
+              "class": "String",
+              "value": "b0n_ZzdzvQa0JCJLeBSG2w",
+              "object_id": 46982537984680
+            }
+          ]
+        }
+      ],
+      "impactDomain": "Maintainability",
+      "participatingEvents": {
+        "request": {
+          "id": 799,
+          "event": "call",
+          "thread_id": 46982486612300,
+          "http_server_request": {
+            "request_method": "GET",
+            "path_info": "/account_activations/b0n_ZzdzvQa0JCJLeBSG2w/edit",
+            "normalized_path_info": "/account_activations/{id}/edit",
+            "headers": {
+              "Host": "www.example.com",
+              "Accept": "text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5",
+              "Cookie": "_sample_app_session=JdxKkraIuJpE6y%2BHgVAdJ2G8AXTyDfVXsQ0AkFFvmA9bH3na9EyDZooHRhZmTInsBcGDVSnNQVf%2ByDKXdkJKa1UJLBMfaNp%2BHc3TvWrNCvhuSyZ9KVcKshoKmOJez7rUJsU3O2ArNKDSnMMeNmlsn7T8lHhi%2FA6rf%2Fv5tjGLapIUr%2FnMSiWySuCF7LSK37QL2QZIsO%2BTa4dbv5jz%2Fees%2FzIckCZz7GKqHrYM%2BGyet9%2F2yz8YP3HubLOYOD%2FgMTAYFmE%2BpTrHmfu0mMBIc9MAB8z5B2Aay%2F6mbnASzJVziJVmnJFNG9vq--WQujJGjwX6x6LQV6--bjYFPrcn4B2yFKE1Pzn8nQ%3D%3D",
+              "Content-Length": "0"
+            }
+          },
+          "message": [
+            {
+              "name": "email",
+              "class": "String",
+              "value": "user@example.com",
+              "object_id": 46982538008980
+            },
+            {
+              "name": "controller",
+              "class": "String",
+              "value": "account_activations",
+              "object_id": 46982509571240
+            },
+            {
+              "name": "action",
+              "class": "String",
+              "value": "edit",
+              "object_id": 46982498859060
+            },
+            {
+              "name": "id",
+              "class": "String",
+              "value": "b0n_ZzdzvQa0JCJLeBSG2w",
+              "object_id": 46982537984680
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "resolvedFindings": [],
+  "apiDiff": {
+    "breakingDifferencesFound": false,
+    "nonBreakingDifferences": [
+      {
+        "type": "non-breaking",
+        "action": "add",
+        "code": "path.add",
+        "destinationSpecEntityDetails": [
+          {
+            "location": "paths./account_activations/{id}/edit",
+            "value": {
+              "get": {
+                "responses": {
+                  "302": {
+                    "content": {},
+                    "description": "Found"
+                  }
+                },
+                "parameters": [
+                  {
+                    "name": "email",
+                    "in": "query",
+                    "schema": {
+                      "type": "string"
+                    }
+                  },
+                  {
+                    "name": "id",
+                    "in": "path",
+                    "schema": {
+                      "type": "string"
+                    },
+                    "required": true
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "entity": "path",
+        "source": "openapi-diff",
+        "sourceSpecEntityDetails": []
+      },
+      {
+        "type": "non-breaking",
+        "action": "add",
+        "code": "path.add",
+        "destinationSpecEntityDetails": [
+          {
+            "location": "paths./password_resets",
+            "value": {
+              "post": {
+                "responses": {
+                  "200": {
+                    "content": {
+                      "text/html": {}
+                    },
+                    "description": "OK"
+                  },
+                  "302": {
+                    "content": {},
+                    "description": "Found"
+                  }
+                },
+                "requestBody": {
+                  "content": {
+                    "application/x-www-form-urlencoded": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "password_reset": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "entity": "path",
+        "source": "openapi-diff",
+        "sourceSpecEntityDetails": []
+      },
+      {
+        "type": "non-breaking",
+        "action": "add",
+        "code": "path.add",
+        "destinationSpecEntityDetails": [
+          {
+            "location": "paths./password_resets/new",
+            "value": {
+              "get": {
+                "responses": {
+                  "200": {
+                    "content": {
+                      "text/html": {}
+                    },
+                    "description": "OK"
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "entity": "path",
+        "source": "openapi-diff",
+        "sourceSpecEntityDetails": []
+      },
+      {
+        "type": "non-breaking",
+        "action": "add",
+        "code": "path.add",
+        "destinationSpecEntityDetails": [
+          {
+            "location": "paths./password_resets/{id}",
+            "value": {
+              "patch": {
+                "responses": {
+                  "200": {
+                    "content": {
+                      "text/html": {}
+                    },
+                    "description": "OK"
+                  },
+                  "302": {
+                    "content": {},
+                    "description": "Found"
+                  }
+                },
+                "requestBody": {
+                  "content": {
+                    "application/x-www-form-urlencoded": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "email": {
+                            "type": "string"
+                          },
+                          "user": {
+                            "type": "object",
+                            "properties": {
+                              "password": {
+                                "type": "string"
+                              },
+                              "password_confirmation": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "parameters": [
+                  {
+                    "name": "id",
+                    "in": "path",
+                    "schema": {
+                      "type": "string"
+                    },
+                    "required": true
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "entity": "path",
+        "source": "openapi-diff",
+        "sourceSpecEntityDetails": []
+      },
+      {
+        "type": "non-breaking",
+        "action": "add",
+        "code": "path.add",
+        "destinationSpecEntityDetails": [
+          {
+            "location": "paths./password_resets/{id}/edit",
+            "value": {
+              "get": {
+                "responses": {
+                  "200": {
+                    "content": {
+                      "text/html": {}
+                    },
+                    "description": "OK"
+                  },
+                  "302": {
+                    "content": {},
+                    "description": "Found"
+                  }
+                },
+                "parameters": [
+                  {
+                    "name": "email",
+                    "in": "query",
+                    "schema": {
+                      "type": "string"
+                    }
+                  },
+                  {
+                    "name": "id",
+                    "in": "path",
+                    "schema": {
+                      "type": "string"
+                    },
+                    "required": true
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "entity": "path",
+        "source": "openapi-diff",
+        "sourceSpecEntityDetails": []
+      },
+      {
+        "type": "non-breaking",
+        "action": "add",
+        "code": "path.add",
+        "destinationSpecEntityDetails": [
+          {
+            "location": "paths./users/{id}/edit",
+            "value": {
+              "get": {
+                "responses": {
+                  "200": {
+                    "content": {
+                      "text/html": {}
+                    },
+                    "description": "OK"
+                  },
+                  "302": {
+                    "content": {},
+                    "description": "Found"
+                  }
+                },
+                "parameters": [
+                  {
+                    "name": "id",
+                    "in": "path",
+                    "schema": {
+                      "type": "string"
+                    },
+                    "required": true
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "entity": "path",
+        "source": "openapi-diff",
+        "sourceSpecEntityDetails": []
+      },
+      {
+        "type": "non-breaking",
+        "action": "add",
+        "code": "method.add",
+        "destinationSpecEntityDetails": [
+          {
+            "location": "paths./users.get",
+            "value": {
+              "responses": {
+                "200": {
+                  "content": {
+                    "text/html": {}
+                  },
+                  "description": "OK"
+                },
+                "302": {
+                  "content": {},
+                  "description": "Found"
+                }
+              }
+            }
+          }
+        ],
+        "entity": "method",
+        "source": "openapi-diff",
+        "sourceSpecEntityDetails": []
+      },
+      {
+        "type": "non-breaking",
+        "action": "add",
+        "code": "method.add",
+        "destinationSpecEntityDetails": [
+          {
+            "location": "paths./users/{id}.delete",
+            "value": {
+              "responses": {
+                "302": {
+                  "content": {},
+                  "description": "Found"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "id",
+                  "in": "path",
+                  "schema": {
+                    "type": "string"
+                  },
+                  "required": true
+                }
+              ]
+            }
+          }
+        ],
+        "entity": "method",
+        "source": "openapi-diff",
+        "sourceSpecEntityDetails": []
+      },
+      {
+        "type": "non-breaking",
+        "action": "add",
+        "code": "method.add",
+        "destinationSpecEntityDetails": [
+          {
+            "location": "paths./users/{id}.patch",
+            "value": {
+              "responses": {
+                "200": {
+                  "content": {
+                    "text/html": {}
+                  },
+                  "description": "OK"
+                },
+                "302": {
+                  "content": {},
+                  "description": "Found"
+                }
+              },
+              "requestBody": {
+                "content": {
+                  "application/x-www-form-urlencoded": {
+                    "schema": {
+                      "type": "object",
+                      "properties": {
+                        "user": {
+                          "type": "object",
+                          "properties": {
+                            "email": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "parameters": [
+                {
+                  "name": "id",
+                  "in": "path",
+                  "schema": {
+                    "type": "string"
+                  },
+                  "required": true
+                }
+              ]
+            }
+          }
+        ],
+        "entity": "method",
+        "source": "openapi-diff",
+        "sourceSpecEntityDetails": []
+      }
+    ],
+    "unclassifiedDifferences": []
+  },
+  "sequenceDiagramDiffSnippets": {
+    "removed loop\n  removed function call `openssl.pbkdf2_hmac_sha1`\n    removed function call `openssl.pbkdf2_hmac`\nadded function call `actionpack#[]`": [
+      "minitest/Sessions_controller_should_get_new",
+      "minitest/Site_layout_layout_links",
+      "minitest/Static_pages_controller_should_get_about",
+      "minitest/Static_pages_controller_should_get_contact",
+      "minitest/Static_pages_controller_should_get_home",
+      "minitest/Static_pages_controller_should_get_help",
+      "minitest/Users_controller_should_get_new",
+      "minitest/Users_login_login_with_valid_email_invalid_password",
+      "minitest/Users_signup_invalid_signup_information"
+    ],
+    "added function call `actionpack#[]`": [
+      "minitest/Users_login_login_with_valid_information_followed_by_logout"
+    ]
+  },
+  "scanConfiguration": {
+    "base": {
+      "checks": [
+        {
+          "rule": "authz-before-authn"
+        },
+        {
+          "rule": "deprecated-crypto-algorithm"
+        },
+        {
+          "rule": "deserialization-of-untrusted-data"
+        },
+        {
+          "rule": "exec-of-untrusted-command"
+        },
+        {
+          "rule": "http-500"
+        },
+        {
+          "rule": "logout-without-session-reset"
+        },
+        {
+          "rule": "missing-content-type"
+        },
+        {
+          "rule": "n-plus-one-query"
+        },
+        {
+          "rule": "secret-in-log"
+        },
+        {
+          "rule": "too-many-joins"
+        },
+        {
+          "rule": "too-many-updates"
+        },
+        {
+          "rule": "unauthenticated-encryption"
+        },
+        {
+          "rule": "update-in-get-request"
+        }
+      ],
+      "timestampMs": 1679515397043.6006
+    },
+    "head": {
+      "checks": [
+        {
+          "rule": "authz-before-authn"
+        },
+        {
+          "rule": "deprecated-crypto-algorithm"
+        },
+        {
+          "rule": "deserialization-of-untrusted-data"
+        },
+        {
+          "rule": "exec-of-untrusted-command"
+        },
+        {
+          "rule": "http-500"
+        },
+        {
+          "rule": "logout-without-session-reset"
+        },
+        {
+          "rule": "missing-content-type"
+        },
+        {
+          "rule": "n-plus-one-query"
+        },
+        {
+          "rule": "secret-in-log"
+        },
+        {
+          "rule": "too-many-joins"
+        },
+        {
+          "rule": "too-many-updates"
+        },
+        {
+          "rule": "unauthenticated-encryption"
+        },
+        {
+          "rule": "update-in-get-request"
+        }
+      ],
+      "timestampMs": 1679515397043.6006
+    }
+  },
+  "appMapMetadata": {
+    "base": {
+      "minitest/Sessions_controller_should_get_new": {
+        "app": "sample_app_6th_ed",
+        "language": {
+          "name": "ruby",
+          "engine": "ruby",
+          "version": "2.7.3"
+        },
+        "client": {
+          "name": "appmap",
+          "url": "https://github.com/applandinc/appmap-ruby",
+          "version": "0.98.1"
+        },
+        "frameworks": [
+          {
+            "name": "rails",
+            "version": "6.1.0"
+          },
+          {
+            "name": "minitest",
+            "version": "5.11.3"
+          }
+        ],
+        "git": {
+          "repository": "git@github.com:land-of-apps/sample_app_6th_ed.git",
+          "branch": "heads/basic-login",
+          "commit": "63c898797f12401e4c6881cd161e13f9049a5546",
+          "status": [
+            "M .gitignore",
+            "M .ruby-version",
+            "M Gemfile",
+            "M Gemfile.lock",
+            "M config/application.rb",
+            "M db/schema.rb",
+            "M test/test_helper.rb",
+            "?? .appmap/",
+            "?? .gitattributes",
+            "?? .rufo",
+            "?? appmap.yml",
+            "?? rails_gem_paths.rb",
+            "?? swagger/"
+          ],
+          "git_last_annotated_tag": null,
+          "git_last_tag": null,
+          "git_commits_since_last_annotated_tag": null,
+          "git_commits_since_last_tag": null
+        },
+        "name": "Sessions_controller should get new",
+        "source_location": "/Users/kgilpin/source/land-of-apps/sample_app_6th_ed/test/controllers/sessions_controller_test.rb:5",
+        "recorder": {
+          "name": "minitest",
+          "type": "tests"
+        },
+        "test_status": "succeeded"
+      },
+      "minitest/Site_layout_layout_links": {
+        "app": "sample_app_6th_ed",
+        "language": {
+          "name": "ruby",
+          "engine": "ruby",
+          "version": "2.7.3"
+        },
+        "client": {
+          "name": "appmap",
+          "url": "https://github.com/applandinc/appmap-ruby",
+          "version": "0.98.1"
+        },
+        "frameworks": [
+          {
+            "name": "rails",
+            "version": "6.1.0"
+          },
+          {
+            "name": "minitest",
+            "version": "5.11.3"
+          }
+        ],
+        "git": {
+          "repository": "git@github.com:land-of-apps/sample_app_6th_ed.git",
+          "branch": "heads/basic-login",
+          "commit": "63c898797f12401e4c6881cd161e13f9049a5546",
+          "status": [
+            "M .gitignore",
+            "M .ruby-version",
+            "M Gemfile",
+            "M Gemfile.lock",
+            "M config/application.rb",
+            "M db/schema.rb",
+            "M test/test_helper.rb",
+            "?? .appmap/",
+            "?? .gitattributes",
+            "?? .rufo",
+            "?? appmap.yml",
+            "?? rails_gem_paths.rb",
+            "?? swagger/"
+          ],
+          "git_last_annotated_tag": null,
+          "git_last_tag": null,
+          "git_commits_since_last_annotated_tag": null,
+          "git_commits_since_last_tag": null
+        },
+        "name": "Site_layout layout links",
+        "source_location": "/Users/kgilpin/source/land-of-apps/sample_app_6th_ed/test/integration/site_layout_test.rb:5",
+        "recorder": {
+          "name": "minitest",
+          "type": "tests"
+        },
+        "test_status": "succeeded"
+      },
+      "minitest/Static_pages_controller_should_get_about": {
+        "app": "sample_app_6th_ed",
+        "language": {
+          "name": "ruby",
+          "engine": "ruby",
+          "version": "2.7.3"
+        },
+        "client": {
+          "name": "appmap",
+          "url": "https://github.com/applandinc/appmap-ruby",
+          "version": "0.98.1"
+        },
+        "frameworks": [
+          {
+            "name": "rails",
+            "version": "6.1.0"
+          },
+          {
+            "name": "minitest",
+            "version": "5.11.3"
+          }
+        ],
+        "git": {
+          "repository": "git@github.com:land-of-apps/sample_app_6th_ed.git",
+          "branch": "heads/basic-login",
+          "commit": "63c898797f12401e4c6881cd161e13f9049a5546",
+          "status": [
+            "M .gitignore",
+            "M .ruby-version",
+            "M Gemfile",
+            "M Gemfile.lock",
+            "M config/application.rb",
+            "M db/schema.rb",
+            "M test/test_helper.rb",
+            "?? .appmap/",
+            "?? .gitattributes",
+            "?? .rufo",
+            "?? appmap.yml",
+            "?? rails_gem_paths.rb",
+            "?? swagger/"
+          ],
+          "git_last_annotated_tag": null,
+          "git_last_tag": null,
+          "git_commits_since_last_annotated_tag": null,
+          "git_commits_since_last_tag": null
+        },
+        "name": "Static_pages_controller should get about",
+        "source_location": "/Users/kgilpin/source/land-of-apps/sample_app_6th_ed/test/controllers/static_pages_controller_test.rb:17",
+        "recorder": {
+          "name": "minitest",
+          "type": "tests"
+        },
+        "test_status": "succeeded"
+      },
+      "minitest/Static_pages_controller_should_get_contact": {
+        "app": "sample_app_6th_ed",
+        "language": {
+          "name": "ruby",
+          "engine": "ruby",
+          "version": "2.7.3"
+        },
+        "client": {
+          "name": "appmap",
+          "url": "https://github.com/applandinc/appmap-ruby",
+          "version": "0.98.1"
+        },
+        "frameworks": [
+          {
+            "name": "rails",
+            "version": "6.1.0"
+          },
+          {
+            "name": "minitest",
+            "version": "5.11.3"
+          }
+        ],
+        "git": {
+          "repository": "git@github.com:land-of-apps/sample_app_6th_ed.git",
+          "branch": "heads/basic-login",
+          "commit": "63c898797f12401e4c6881cd161e13f9049a5546",
+          "status": [
+            "M .gitignore",
+            "M .ruby-version",
+            "M Gemfile",
+            "M Gemfile.lock",
+            "M config/application.rb",
+            "M db/schema.rb",
+            "M test/test_helper.rb",
+            "?? .appmap/",
+            "?? .gitattributes",
+            "?? .rufo",
+            "?? appmap.yml",
+            "?? rails_gem_paths.rb",
+            "?? swagger/"
+          ],
+          "git_last_annotated_tag": null,
+          "git_last_tag": null,
+          "git_commits_since_last_annotated_tag": null,
+          "git_commits_since_last_tag": null
+        },
+        "name": "Static_pages_controller should get contact",
+        "source_location": "/Users/kgilpin/source/land-of-apps/sample_app_6th_ed/test/controllers/static_pages_controller_test.rb:23",
+        "recorder": {
+          "name": "minitest",
+          "type": "tests"
+        },
+        "test_status": "succeeded"
+      },
+      "minitest/Static_pages_controller_should_get_help": {
+        "app": "sample_app_6th_ed",
+        "language": {
+          "name": "ruby",
+          "engine": "ruby",
+          "version": "2.7.3"
+        },
+        "client": {
+          "name": "appmap",
+          "url": "https://github.com/applandinc/appmap-ruby",
+          "version": "0.98.1"
+        },
+        "frameworks": [
+          {
+            "name": "rails",
+            "version": "6.1.0"
+          },
+          {
+            "name": "minitest",
+            "version": "5.11.3"
+          }
+        ],
+        "git": {
+          "repository": "git@github.com:land-of-apps/sample_app_6th_ed.git",
+          "branch": "heads/basic-login",
+          "commit": "63c898797f12401e4c6881cd161e13f9049a5546",
+          "status": [
+            "M .gitignore",
+            "M .ruby-version",
+            "M Gemfile",
+            "M Gemfile.lock",
+            "M config/application.rb",
+            "M db/schema.rb",
+            "M test/test_helper.rb",
+            "?? .appmap/",
+            "?? .gitattributes",
+            "?? .rufo",
+            "?? appmap.yml",
+            "?? rails_gem_paths.rb",
+            "?? swagger/"
+          ],
+          "git_last_annotated_tag": null,
+          "git_last_tag": null,
+          "git_commits_since_last_annotated_tag": null,
+          "git_commits_since_last_tag": null
+        },
+        "name": "Static_pages_controller should get help",
+        "source_location": "/Users/kgilpin/source/land-of-apps/sample_app_6th_ed/test/controllers/static_pages_controller_test.rb:11",
+        "recorder": {
+          "name": "minitest",
+          "type": "tests"
+        },
+        "test_status": "succeeded"
+      },
+      "minitest/Static_pages_controller_should_get_home": {
+        "app": "sample_app_6th_ed",
+        "language": {
+          "name": "ruby",
+          "engine": "ruby",
+          "version": "2.7.3"
+        },
+        "client": {
+          "name": "appmap",
+          "url": "https://github.com/applandinc/appmap-ruby",
+          "version": "0.98.1"
+        },
+        "frameworks": [
+          {
+            "name": "rails",
+            "version": "6.1.0"
+          },
+          {
+            "name": "minitest",
+            "version": "5.11.3"
+          }
+        ],
+        "git": {
+          "repository": "git@github.com:land-of-apps/sample_app_6th_ed.git",
+          "branch": "heads/basic-login",
+          "commit": "63c898797f12401e4c6881cd161e13f9049a5546",
+          "status": [
+            "M .gitignore",
+            "M .ruby-version",
+            "M Gemfile",
+            "M Gemfile.lock",
+            "M config/application.rb",
+            "M db/schema.rb",
+            "M test/test_helper.rb",
+            "?? .appmap/",
+            "?? .gitattributes",
+            "?? .rufo",
+            "?? appmap.yml",
+            "?? rails_gem_paths.rb",
+            "?? swagger/"
+          ],
+          "git_last_annotated_tag": null,
+          "git_last_tag": null,
+          "git_commits_since_last_annotated_tag": null,
+          "git_commits_since_last_tag": null
+        },
+        "name": "Static_pages_controller should get home",
+        "source_location": "/Users/kgilpin/source/land-of-apps/sample_app_6th_ed/test/controllers/static_pages_controller_test.rb:5",
+        "recorder": {
+          "name": "minitest",
+          "type": "tests"
+        },
+        "test_status": "succeeded"
+      },
+      "minitest/Users_login_login_with_valid_email_invalid_password": {
+        "app": "sample_app_6th_ed",
+        "language": {
+          "name": "ruby",
+          "engine": "ruby",
+          "version": "2.7.3"
+        },
+        "client": {
+          "name": "appmap",
+          "url": "https://github.com/applandinc/appmap-ruby",
+          "version": "0.98.1"
+        },
+        "frameworks": [
+          {
+            "name": "rails",
+            "version": "6.1.0"
+          },
+          {
+            "name": "minitest",
+            "version": "5.11.3"
+          }
+        ],
+        "git": {
+          "repository": "git@github.com:land-of-apps/sample_app_6th_ed.git",
+          "branch": "heads/basic-login",
+          "commit": "63c898797f12401e4c6881cd161e13f9049a5546",
+          "status": [
+            "M .gitignore",
+            "M .ruby-version",
+            "M Gemfile",
+            "M Gemfile.lock",
+            "M config/application.rb",
+            "M db/schema.rb",
+            "M test/test_helper.rb",
+            "?? .appmap/",
+            "?? .gitattributes",
+            "?? .rufo",
+            "?? appmap.yml",
+            "?? rails_gem_paths.rb",
+            "?? swagger/"
+          ],
+          "git_last_annotated_tag": null,
+          "git_last_tag": null,
+          "git_commits_since_last_annotated_tag": null,
+          "git_commits_since_last_tag": null
+        },
+        "name": "Users_login login with valid email/invalid password",
+        "source_location": "/Users/kgilpin/source/land-of-apps/sample_app_6th_ed/test/integration/users_login_test.rb:9",
+        "recorder": {
+          "name": "minitest",
+          "type": "tests"
+        },
+        "test_status": "succeeded"
+      },
+      "minitest/Users_controller_should_get_new": {
+        "app": "sample_app_6th_ed",
+        "language": {
+          "name": "ruby",
+          "engine": "ruby",
+          "version": "2.7.3"
+        },
+        "client": {
+          "name": "appmap",
+          "url": "https://github.com/applandinc/appmap-ruby",
+          "version": "0.98.1"
+        },
+        "frameworks": [
+          {
+            "name": "rails",
+            "version": "6.1.0"
+          },
+          {
+            "name": "minitest",
+            "version": "5.11.3"
+          }
+        ],
+        "git": {
+          "repository": "git@github.com:land-of-apps/sample_app_6th_ed.git",
+          "branch": "heads/basic-login",
+          "commit": "63c898797f12401e4c6881cd161e13f9049a5546",
+          "status": [
+            "M .gitignore",
+            "M .ruby-version",
+            "M Gemfile",
+            "M Gemfile.lock",
+            "M config/application.rb",
+            "M db/schema.rb",
+            "M test/test_helper.rb",
+            "?? .appmap/",
+            "?? .gitattributes",
+            "?? .rufo",
+            "?? appmap.yml",
+            "?? rails_gem_paths.rb",
+            "?? swagger/"
+          ],
+          "git_last_annotated_tag": null,
+          "git_last_tag": null,
+          "git_commits_since_last_annotated_tag": null,
+          "git_commits_since_last_tag": null
+        },
+        "name": "Users_controller should get new",
+        "source_location": "/Users/kgilpin/source/land-of-apps/sample_app_6th_ed/test/controllers/users_controller_test.rb:5",
+        "recorder": {
+          "name": "minitest",
+          "type": "tests"
+        },
+        "test_status": "succeeded"
+      },
+      "minitest/Users_login_login_with_valid_information_followed_by_logout": {
+        "app": "sample_app_6th_ed",
+        "language": {
+          "name": "ruby",
+          "engine": "ruby",
+          "version": "2.7.3"
+        },
+        "client": {
+          "name": "appmap",
+          "url": "https://github.com/applandinc/appmap-ruby",
+          "version": "0.98.1"
+        },
+        "frameworks": [
+          {
+            "name": "rails",
+            "version": "6.1.0"
+          },
+          {
+            "name": "minitest",
+            "version": "5.11.3"
+          }
+        ],
+        "git": {
+          "repository": "git@github.com:land-of-apps/sample_app_6th_ed.git",
+          "branch": "heads/basic-login",
+          "commit": "63c898797f12401e4c6881cd161e13f9049a5546",
+          "status": [
+            "M .gitignore",
+            "M .ruby-version",
+            "M Gemfile",
+            "M Gemfile.lock",
+            "M config/application.rb",
+            "M db/schema.rb",
+            "M test/test_helper.rb",
+            "?? .appmap/",
+            "?? .gitattributes",
+            "?? .rufo",
+            "?? appmap.yml",
+            "?? rails_gem_paths.rb",
+            "?? swagger/"
+          ],
+          "git_last_annotated_tag": null,
+          "git_last_tag": null,
+          "git_commits_since_last_annotated_tag": null,
+          "git_commits_since_last_tag": null
+        },
+        "name": "Users_login login with valid information followed by logout",
+        "source_location": "/Users/kgilpin/source/land-of-apps/sample_app_6th_ed/test/integration/users_login_test.rb:21",
+        "recorder": {
+          "name": "minitest",
+          "type": "tests"
+        },
+        "test_status": "succeeded"
+      },
+      "minitest/Users_signup_invalid_signup_information": {
+        "app": "sample_app_6th_ed",
+        "language": {
+          "name": "ruby",
+          "engine": "ruby",
+          "version": "2.7.3"
+        },
+        "client": {
+          "name": "appmap",
+          "url": "https://github.com/applandinc/appmap-ruby",
+          "version": "0.98.1"
+        },
+        "frameworks": [
+          {
+            "name": "rails",
+            "version": "6.1.0"
+          },
+          {
+            "name": "minitest",
+            "version": "5.11.3"
+          }
+        ],
+        "git": {
+          "repository": "git@github.com:land-of-apps/sample_app_6th_ed.git",
+          "branch": "heads/basic-login",
+          "commit": "63c898797f12401e4c6881cd161e13f9049a5546",
+          "status": [
+            "M .gitignore",
+            "M .ruby-version",
+            "M Gemfile",
+            "M Gemfile.lock",
+            "M config/application.rb",
+            "M db/schema.rb",
+            "M test/test_helper.rb",
+            "?? .appmap/",
+            "?? .gitattributes",
+            "?? .rufo",
+            "?? appmap.yml",
+            "?? rails_gem_paths.rb",
+            "?? swagger/"
+          ],
+          "git_last_annotated_tag": null,
+          "git_last_tag": null,
+          "git_commits_since_last_annotated_tag": null,
+          "git_commits_since_last_tag": null
+        },
+        "name": "Users_signup invalid signup information",
+        "source_location": "/Users/kgilpin/source/land-of-apps/sample_app_6th_ed/test/integration/users_signup_test.rb:5",
+        "recorder": {
+          "name": "minitest",
+          "type": "tests"
+        },
+        "test_status": "succeeded"
+      },
+      "minitest/Users_signup_valid_signup_information": {
+        "app": "sample_app_6th_ed",
+        "language": {
+          "name": "ruby",
+          "engine": "ruby",
+          "version": "2.7.3"
+        },
+        "client": {
+          "name": "appmap",
+          "url": "https://github.com/applandinc/appmap-ruby",
+          "version": "0.98.1"
+        },
+        "frameworks": [
+          {
+            "name": "rails",
+            "version": "6.1.0"
+          },
+          {
+            "name": "minitest",
+            "version": "5.11.3"
+          }
+        ],
+        "git": {
+          "repository": "git@github.com:land-of-apps/sample_app_6th_ed.git",
+          "branch": "heads/basic-login",
+          "commit": "63c898797f12401e4c6881cd161e13f9049a5546",
+          "status": [
+            "M .gitignore",
+            "M .ruby-version",
+            "M Gemfile",
+            "M Gemfile.lock",
+            "M config/application.rb",
+            "M db/schema.rb",
+            "M test/test_helper.rb",
+            "?? .appmap/",
+            "?? .gitattributes",
+            "?? .rufo",
+            "?? appmap.yml",
+            "?? rails_gem_paths.rb",
+            "?? swagger/"
+          ],
+          "git_last_annotated_tag": null,
+          "git_last_tag": null,
+          "git_commits_since_last_annotated_tag": null,
+          "git_commits_since_last_tag": null
+        },
+        "name": "Users_signup valid signup information",
+        "source_location": "/Users/kgilpin/source/land-of-apps/sample_app_6th_ed/test/integration/users_signup_test.rb:16",
+        "recorder": {
+          "name": "minitest",
+          "type": "tests"
+        },
+        "test_status": "succeeded"
+      }
+    },
+    "head": {
+      "minitest/Password_resets_password_resets": {
+        "app": "sample_app_6th_ed",
+        "language": {
+          "name": "ruby",
+          "engine": "ruby",
+          "version": "2.6.3"
+        },
+        "client": {
+          "name": "appmap",
+          "url": "https://github.com/applandinc/appmap-ruby",
+          "version": "0.98.1"
+        },
+        "frameworks": [
+          {
+            "name": "rails",
+            "version": "6.0.3.2"
+          },
+          {
+            "name": "minitest",
+            "version": "5.11.3"
+          }
+        ],
+        "git": {
+          "repository": "https://github.com/land-of-apps/sample_app_6th_ed",
+          "branch": "HEAD",
+          "commit": "2abc5b7bd55a29df41d63f7c0a088cf0d42f7d87",
+          "status": [
+            "M Gemfile",
+            "M Gemfile.lock",
+            "A appmap.yml",
+            "?? patch"
+          ],
+          "git_last_annotated_tag": null,
+          "git_last_tag": null,
+          "git_commits_since_last_annotated_tag": null,
+          "git_commits_since_last_tag": null
+        },
+        "name": "Password_resets password resets",
+        "source_location": "/home/runner/work/sample_app_6th_ed/sample_app_6th_ed/test/integration/password_resets_test.rb:10",
+        "recorder": {
+          "name": "minitest",
+          "type": "tests"
+        },
+        "test_status": "succeeded"
+      },
+      "minitest/Sessions_controller_should_get_new": {
+        "app": "sample_app_6th_ed",
+        "language": {
+          "name": "ruby",
+          "engine": "ruby",
+          "version": "2.6.3"
+        },
+        "client": {
+          "name": "appmap",
+          "url": "https://github.com/applandinc/appmap-ruby",
+          "version": "0.98.1"
+        },
+        "frameworks": [
+          {
+            "name": "rails",
+            "version": "6.0.3.2"
+          },
+          {
+            "name": "minitest",
+            "version": "5.11.3"
+          }
+        ],
+        "git": {
+          "repository": "https://github.com/land-of-apps/sample_app_6th_ed",
+          "branch": "HEAD",
+          "commit": "2abc5b7bd55a29df41d63f7c0a088cf0d42f7d87",
+          "status": [
+            "M Gemfile",
+            "M Gemfile.lock",
+            "A appmap.yml",
+            "?? patch"
+          ],
+          "git_last_annotated_tag": null,
+          "git_last_tag": null,
+          "git_commits_since_last_annotated_tag": null,
+          "git_commits_since_last_tag": null
+        },
+        "name": "Sessions_controller should get new",
+        "source_location": "/home/runner/work/sample_app_6th_ed/sample_app_6th_ed/test/controllers/sessions_controller_test.rb:5",
+        "recorder": {
+          "name": "minitest",
+          "type": "tests"
+        },
+        "test_status": "succeeded"
+      },
+      "minitest/Site_layout_layout_links": {
+        "app": "sample_app_6th_ed",
+        "language": {
+          "name": "ruby",
+          "engine": "ruby",
+          "version": "2.6.3"
+        },
+        "client": {
+          "name": "appmap",
+          "url": "https://github.com/applandinc/appmap-ruby",
+          "version": "0.98.1"
+        },
+        "frameworks": [
+          {
+            "name": "rails",
+            "version": "6.0.3.2"
+          },
+          {
+            "name": "minitest",
+            "version": "5.11.3"
+          }
+        ],
+        "git": {
+          "repository": "https://github.com/land-of-apps/sample_app_6th_ed",
+          "branch": "HEAD",
+          "commit": "2abc5b7bd55a29df41d63f7c0a088cf0d42f7d87",
+          "status": [
+            "M Gemfile",
+            "M Gemfile.lock",
+            "A appmap.yml",
+            "?? patch"
+          ],
+          "git_last_annotated_tag": null,
+          "git_last_tag": null,
+          "git_commits_since_last_annotated_tag": null,
+          "git_commits_since_last_tag": null
+        },
+        "name": "Site_layout layout links",
+        "source_location": "/home/runner/work/sample_app_6th_ed/sample_app_6th_ed/test/integration/site_layout_test.rb:5",
+        "recorder": {
+          "name": "minitest",
+          "type": "tests"
+        },
+        "test_status": "succeeded"
+      },
+      "minitest/Static_pages_controller_should_get_about": {
+        "app": "sample_app_6th_ed",
+        "language": {
+          "name": "ruby",
+          "engine": "ruby",
+          "version": "2.6.3"
+        },
+        "client": {
+          "name": "appmap",
+          "url": "https://github.com/applandinc/appmap-ruby",
+          "version": "0.98.1"
+        },
+        "frameworks": [
+          {
+            "name": "rails",
+            "version": "6.0.3.2"
+          },
+          {
+            "name": "minitest",
+            "version": "5.11.3"
+          }
+        ],
+        "git": {
+          "repository": "https://github.com/land-of-apps/sample_app_6th_ed",
+          "branch": "HEAD",
+          "commit": "2abc5b7bd55a29df41d63f7c0a088cf0d42f7d87",
+          "status": [
+            "M Gemfile",
+            "M Gemfile.lock",
+            "A appmap.yml",
+            "?? patch"
+          ],
+          "git_last_annotated_tag": null,
+          "git_last_tag": null,
+          "git_commits_since_last_annotated_tag": null,
+          "git_commits_since_last_tag": null
+        },
+        "name": "Static_pages_controller should get about",
+        "source_location": "/home/runner/work/sample_app_6th_ed/sample_app_6th_ed/test/controllers/static_pages_controller_test.rb:17",
+        "recorder": {
+          "name": "minitest",
+          "type": "tests"
+        },
+        "test_status": "succeeded"
+      },
+      "minitest/Static_pages_controller_should_get_contact": {
+        "app": "sample_app_6th_ed",
+        "language": {
+          "name": "ruby",
+          "engine": "ruby",
+          "version": "2.6.3"
+        },
+        "client": {
+          "name": "appmap",
+          "url": "https://github.com/applandinc/appmap-ruby",
+          "version": "0.98.1"
+        },
+        "frameworks": [
+          {
+            "name": "rails",
+            "version": "6.0.3.2"
+          },
+          {
+            "name": "minitest",
+            "version": "5.11.3"
+          }
+        ],
+        "git": {
+          "repository": "https://github.com/land-of-apps/sample_app_6th_ed",
+          "branch": "HEAD",
+          "commit": "2abc5b7bd55a29df41d63f7c0a088cf0d42f7d87",
+          "status": [
+            "M Gemfile",
+            "M Gemfile.lock",
+            "A appmap.yml",
+            "?? patch"
+          ],
+          "git_last_annotated_tag": null,
+          "git_last_tag": null,
+          "git_commits_since_last_annotated_tag": null,
+          "git_commits_since_last_tag": null
+        },
+        "name": "Static_pages_controller should get contact",
+        "source_location": "/home/runner/work/sample_app_6th_ed/sample_app_6th_ed/test/controllers/static_pages_controller_test.rb:23",
+        "recorder": {
+          "name": "minitest",
+          "type": "tests"
+        },
+        "test_status": "succeeded"
+      },
+      "minitest/Static_pages_controller_should_get_help": {
+        "app": "sample_app_6th_ed",
+        "language": {
+          "name": "ruby",
+          "engine": "ruby",
+          "version": "2.6.3"
+        },
+        "client": {
+          "name": "appmap",
+          "url": "https://github.com/applandinc/appmap-ruby",
+          "version": "0.98.1"
+        },
+        "frameworks": [
+          {
+            "name": "rails",
+            "version": "6.0.3.2"
+          },
+          {
+            "name": "minitest",
+            "version": "5.11.3"
+          }
+        ],
+        "git": {
+          "repository": "https://github.com/land-of-apps/sample_app_6th_ed",
+          "branch": "HEAD",
+          "commit": "2abc5b7bd55a29df41d63f7c0a088cf0d42f7d87",
+          "status": [
+            "M Gemfile",
+            "M Gemfile.lock",
+            "A appmap.yml",
+            "?? patch"
+          ],
+          "git_last_annotated_tag": null,
+          "git_last_tag": null,
+          "git_commits_since_last_annotated_tag": null,
+          "git_commits_since_last_tag": null
+        },
+        "name": "Static_pages_controller should get help",
+        "source_location": "/home/runner/work/sample_app_6th_ed/sample_app_6th_ed/test/controllers/static_pages_controller_test.rb:11",
+        "recorder": {
+          "name": "minitest",
+          "type": "tests"
+        },
+        "test_status": "succeeded"
+      },
+      "minitest/Static_pages_controller_should_get_home": {
+        "app": "sample_app_6th_ed",
+        "language": {
+          "name": "ruby",
+          "engine": "ruby",
+          "version": "2.6.3"
+        },
+        "client": {
+          "name": "appmap",
+          "url": "https://github.com/applandinc/appmap-ruby",
+          "version": "0.98.1"
+        },
+        "frameworks": [
+          {
+            "name": "rails",
+            "version": "6.0.3.2"
+          },
+          {
+            "name": "minitest",
+            "version": "5.11.3"
+          }
+        ],
+        "git": {
+          "repository": "https://github.com/land-of-apps/sample_app_6th_ed",
+          "branch": "HEAD",
+          "commit": "2abc5b7bd55a29df41d63f7c0a088cf0d42f7d87",
+          "status": [
+            "M Gemfile",
+            "M Gemfile.lock",
+            "A appmap.yml",
+            "?? patch"
+          ],
+          "git_last_annotated_tag": null,
+          "git_last_tag": null,
+          "git_commits_since_last_annotated_tag": null,
+          "git_commits_since_last_tag": null
+        },
+        "name": "Static_pages_controller should get home",
+        "source_location": "/home/runner/work/sample_app_6th_ed/sample_app_6th_ed/test/controllers/static_pages_controller_test.rb:5",
+        "recorder": {
+          "name": "minitest",
+          "type": "tests"
+        },
+        "test_status": "succeeded"
+      },
+      "minitest/Users_controller_should_get_new": {
+        "app": "sample_app_6th_ed",
+        "language": {
+          "name": "ruby",
+          "engine": "ruby",
+          "version": "2.6.3"
+        },
+        "client": {
+          "name": "appmap",
+          "url": "https://github.com/applandinc/appmap-ruby",
+          "version": "0.98.1"
+        },
+        "frameworks": [
+          {
+            "name": "rails",
+            "version": "6.0.3.2"
+          },
+          {
+            "name": "minitest",
+            "version": "5.11.3"
+          }
+        ],
+        "git": {
+          "repository": "https://github.com/land-of-apps/sample_app_6th_ed",
+          "branch": "HEAD",
+          "commit": "2abc5b7bd55a29df41d63f7c0a088cf0d42f7d87",
+          "status": [
+            "M Gemfile",
+            "M Gemfile.lock",
+            "A appmap.yml",
+            "?? patch"
+          ],
+          "git_last_annotated_tag": null,
+          "git_last_tag": null,
+          "git_commits_since_last_annotated_tag": null,
+          "git_commits_since_last_tag": null
+        },
+        "name": "Users_controller should get new",
+        "source_location": "/home/runner/work/sample_app_6th_ed/sample_app_6th_ed/test/controllers/users_controller_test.rb:10",
+        "recorder": {
+          "name": "minitest",
+          "type": "tests"
+        },
+        "test_status": "succeeded"
+      },
+      "minitest/Users_controller_should_redirect_destroy_when_logged_in_as_a_non-admin": {
+        "app": "sample_app_6th_ed",
+        "language": {
+          "name": "ruby",
+          "engine": "ruby",
+          "version": "2.6.3"
+        },
+        "client": {
+          "name": "appmap",
+          "url": "https://github.com/applandinc/appmap-ruby",
+          "version": "0.98.1"
+        },
+        "frameworks": [
+          {
+            "name": "rails",
+            "version": "6.0.3.2"
+          },
+          {
+            "name": "minitest",
+            "version": "5.11.3"
+          }
+        ],
+        "git": {
+          "repository": "https://github.com/land-of-apps/sample_app_6th_ed",
+          "branch": "HEAD",
+          "commit": "2abc5b7bd55a29df41d63f7c0a088cf0d42f7d87",
+          "status": [
+            "M Gemfile",
+            "M Gemfile.lock",
+            "A appmap.yml",
+            "?? patch"
+          ],
+          "git_last_annotated_tag": null,
+          "git_last_tag": null,
+          "git_commits_since_last_annotated_tag": null,
+          "git_commits_since_last_tag": null
+        },
+        "name": "Users_controller should redirect destroy when logged in as a non-admin",
+        "source_location": "/home/runner/work/sample_app_6th_ed/sample_app_6th_ed/test/controllers/users_controller_test.rb:55",
+        "recorder": {
+          "name": "minitest",
+          "type": "tests"
+        },
+        "test_status": "succeeded"
+      },
+      "minitest/Users_controller_should_redirect_destroy_when_not_logged_in": {
+        "app": "sample_app_6th_ed",
+        "language": {
+          "name": "ruby",
+          "engine": "ruby",
+          "version": "2.6.3"
+        },
+        "client": {
+          "name": "appmap",
+          "url": "https://github.com/applandinc/appmap-ruby",
+          "version": "0.98.1"
+        },
+        "frameworks": [
+          {
+            "name": "rails",
+            "version": "6.0.3.2"
+          },
+          {
+            "name": "minitest",
+            "version": "5.11.3"
+          }
+        ],
+        "git": {
+          "repository": "https://github.com/land-of-apps/sample_app_6th_ed",
+          "branch": "HEAD",
+          "commit": "2abc5b7bd55a29df41d63f7c0a088cf0d42f7d87",
+          "status": [
+            "M Gemfile",
+            "M Gemfile.lock",
+            "A appmap.yml",
+            "?? patch"
+          ],
+          "git_last_annotated_tag": null,
+          "git_last_tag": null,
+          "git_commits_since_last_annotated_tag": null,
+          "git_commits_since_last_tag": null
+        },
+        "name": "Users_controller should redirect destroy when not logged in",
+        "source_location": "/home/runner/work/sample_app_6th_ed/sample_app_6th_ed/test/controllers/users_controller_test.rb:48",
+        "recorder": {
+          "name": "minitest",
+          "type": "tests"
+        },
+        "test_status": "succeeded"
+      },
+      "minitest/Users_controller_should_redirect_edit_when_logged_in_as_wrong_user": {
+        "app": "sample_app_6th_ed",
+        "language": {
+          "name": "ruby",
+          "engine": "ruby",
+          "version": "2.6.3"
+        },
+        "client": {
+          "name": "appmap",
+          "url": "https://github.com/applandinc/appmap-ruby",
+          "version": "0.98.1"
+        },
+        "frameworks": [
+          {
+            "name": "rails",
+            "version": "6.0.3.2"
+          },
+          {
+            "name": "minitest",
+            "version": "5.11.3"
+          }
+        ],
+        "git": {
+          "repository": "https://github.com/land-of-apps/sample_app_6th_ed",
+          "branch": "HEAD",
+          "commit": "2abc5b7bd55a29df41d63f7c0a088cf0d42f7d87",
+          "status": [
+            "M Gemfile",
+            "M Gemfile.lock",
+            "A appmap.yml",
+            "?? patch"
+          ],
+          "git_last_annotated_tag": null,
+          "git_last_tag": null,
+          "git_commits_since_last_annotated_tag": null,
+          "git_commits_since_last_tag": null
+        },
+        "name": "Users_controller should redirect edit when logged in as wrong user",
+        "source_location": "/home/runner/work/sample_app_6th_ed/sample_app_6th_ed/test/controllers/users_controller_test.rb:33",
+        "recorder": {
+          "name": "minitest",
+          "type": "tests"
+        },
+        "test_status": "succeeded"
+      },
+      "minitest/Users_controller_should_redirect_edit_when_not_logged_in": {
+        "app": "sample_app_6th_ed",
+        "language": {
+          "name": "ruby",
+          "engine": "ruby",
+          "version": "2.6.3"
+        },
+        "client": {
+          "name": "appmap",
+          "url": "https://github.com/applandinc/appmap-ruby",
+          "version": "0.98.1"
+        },
+        "frameworks": [
+          {
+            "name": "rails",
+            "version": "6.0.3.2"
+          },
+          {
+            "name": "minitest",
+            "version": "5.11.3"
+          }
+        ],
+        "git": {
+          "repository": "https://github.com/land-of-apps/sample_app_6th_ed",
+          "branch": "HEAD",
+          "commit": "2abc5b7bd55a29df41d63f7c0a088cf0d42f7d87",
+          "status": [
+            "M Gemfile",
+            "M Gemfile.lock",
+            "A appmap.yml",
+            "?? patch"
+          ],
+          "git_last_annotated_tag": null,
+          "git_last_tag": null,
+          "git_commits_since_last_annotated_tag": null,
+          "git_commits_since_last_tag": null
+        },
+        "name": "Users_controller should redirect edit when not logged in",
+        "source_location": "/home/runner/work/sample_app_6th_ed/sample_app_6th_ed/test/controllers/users_controller_test.rb:20",
+        "recorder": {
+          "name": "minitest",
+          "type": "tests"
+        },
+        "test_status": "succeeded"
+      },
+      "minitest/Users_controller_should_redirect_index_when_not_logged_in": {
+        "app": "sample_app_6th_ed",
+        "language": {
+          "name": "ruby",
+          "engine": "ruby",
+          "version": "2.6.3"
+        },
+        "client": {
+          "name": "appmap",
+          "url": "https://github.com/applandinc/appmap-ruby",
+          "version": "0.98.1"
+        },
+        "frameworks": [
+          {
+            "name": "rails",
+            "version": "6.0.3.2"
+          },
+          {
+            "name": "minitest",
+            "version": "5.11.3"
+          }
+        ],
+        "git": {
+          "repository": "https://github.com/land-of-apps/sample_app_6th_ed",
+          "branch": "HEAD",
+          "commit": "2abc5b7bd55a29df41d63f7c0a088cf0d42f7d87",
+          "status": [
+            "M Gemfile",
+            "M Gemfile.lock",
+            "A appmap.yml",
+            "?? patch"
+          ],
+          "git_last_annotated_tag": null,
+          "git_last_tag": null,
+          "git_commits_since_last_annotated_tag": null,
+          "git_commits_since_last_tag": null
+        },
+        "name": "Users_controller should redirect index when not logged in",
+        "source_location": "/home/runner/work/sample_app_6th_ed/sample_app_6th_ed/test/controllers/users_controller_test.rb:15",
+        "recorder": {
+          "name": "minitest",
+          "type": "tests"
+        },
+        "test_status": "succeeded"
+      },
+      "minitest/Users_controller_should_redirect_update_when_logged_in_as_wrong_user": {
+        "app": "sample_app_6th_ed",
+        "language": {
+          "name": "ruby",
+          "engine": "ruby",
+          "version": "2.6.3"
+        },
+        "client": {
+          "name": "appmap",
+          "url": "https://github.com/applandinc/appmap-ruby",
+          "version": "0.98.1"
+        },
+        "frameworks": [
+          {
+            "name": "rails",
+            "version": "6.0.3.2"
+          },
+          {
+            "name": "minitest",
+            "version": "5.11.3"
+          }
+        ],
+        "git": {
+          "repository": "https://github.com/land-of-apps/sample_app_6th_ed",
+          "branch": "HEAD",
+          "commit": "2abc5b7bd55a29df41d63f7c0a088cf0d42f7d87",
+          "status": [
+            "M Gemfile",
+            "M Gemfile.lock",
+            "A appmap.yml",
+            "?? patch"
+          ],
+          "git_last_annotated_tag": null,
+          "git_last_tag": null,
+          "git_commits_since_last_annotated_tag": null,
+          "git_commits_since_last_tag": null
+        },
+        "name": "Users_controller should redirect update when logged in as wrong user",
+        "source_location": "/home/runner/work/sample_app_6th_ed/sample_app_6th_ed/test/controllers/users_controller_test.rb:40",
+        "recorder": {
+          "name": "minitest",
+          "type": "tests"
+        },
+        "test_status": "succeeded"
+      },
+      "minitest/Users_edit_unsuccessful_edit": {
+        "app": "sample_app_6th_ed",
+        "language": {
+          "name": "ruby",
+          "engine": "ruby",
+          "version": "2.6.3"
+        },
+        "client": {
+          "name": "appmap",
+          "url": "https://github.com/applandinc/appmap-ruby",
+          "version": "0.98.1"
+        },
+        "frameworks": [
+          {
+            "name": "rails",
+            "version": "6.0.3.2"
+          },
+          {
+            "name": "minitest",
+            "version": "5.11.3"
+          }
+        ],
+        "git": {
+          "repository": "https://github.com/land-of-apps/sample_app_6th_ed",
+          "branch": "HEAD",
+          "commit": "2abc5b7bd55a29df41d63f7c0a088cf0d42f7d87",
+          "status": [
+            "M Gemfile",
+            "M Gemfile.lock",
+            "A appmap.yml",
+            "?? patch"
+          ],
+          "git_last_annotated_tag": null,
+          "git_last_tag": null,
+          "git_commits_since_last_annotated_tag": null,
+          "git_commits_since_last_tag": null
+        },
+        "name": "Users_edit unsuccessful edit",
+        "source_location": "/home/runner/work/sample_app_6th_ed/sample_app_6th_ed/test/integration/users_edit_test.rb:9",
+        "recorder": {
+          "name": "minitest",
+          "type": "tests"
+        },
+        "test_status": "succeeded"
+      },
+      "minitest/Users_controller_should_redirect_update_when_not_logged_in": {
+        "app": "sample_app_6th_ed",
+        "language": {
+          "name": "ruby",
+          "engine": "ruby",
+          "version": "2.6.3"
+        },
+        "client": {
+          "name": "appmap",
+          "url": "https://github.com/applandinc/appmap-ruby",
+          "version": "0.98.1"
+        },
+        "frameworks": [
+          {
+            "name": "rails",
+            "version": "6.0.3.2"
+          },
+          {
+            "name": "minitest",
+            "version": "5.11.3"
+          }
+        ],
+        "git": {
+          "repository": "https://github.com/land-of-apps/sample_app_6th_ed",
+          "branch": "HEAD",
+          "commit": "2abc5b7bd55a29df41d63f7c0a088cf0d42f7d87",
+          "status": [
+            "M Gemfile",
+            "M Gemfile.lock",
+            "A appmap.yml",
+            "?? patch"
+          ],
+          "git_last_annotated_tag": null,
+          "git_last_tag": null,
+          "git_commits_since_last_annotated_tag": null,
+          "git_commits_since_last_tag": null
+        },
+        "name": "Users_controller should redirect update when not logged in",
+        "source_location": "/home/runner/work/sample_app_6th_ed/sample_app_6th_ed/test/controllers/users_controller_test.rb:26",
+        "recorder": {
+          "name": "minitest",
+          "type": "tests"
+        },
+        "test_status": "succeeded"
+      },
+      "minitest/Users_edit_successful_edit_with_friendly_forwarding": {
+        "app": "sample_app_6th_ed",
+        "language": {
+          "name": "ruby",
+          "engine": "ruby",
+          "version": "2.6.3"
+        },
+        "client": {
+          "name": "appmap",
+          "url": "https://github.com/applandinc/appmap-ruby",
+          "version": "0.98.1"
+        },
+        "frameworks": [
+          {
+            "name": "rails",
+            "version": "6.0.3.2"
+          },
+          {
+            "name": "minitest",
+            "version": "5.11.3"
+          }
+        ],
+        "git": {
+          "repository": "https://github.com/land-of-apps/sample_app_6th_ed",
+          "branch": "HEAD",
+          "commit": "2abc5b7bd55a29df41d63f7c0a088cf0d42f7d87",
+          "status": [
+            "M Gemfile",
+            "M Gemfile.lock",
+            "A appmap.yml",
+            "?? patch"
+          ],
+          "git_last_annotated_tag": null,
+          "git_last_tag": null,
+          "git_commits_since_last_annotated_tag": null,
+          "git_commits_since_last_tag": null
+        },
+        "name": "Users_edit successful edit with friendly forwarding",
+        "source_location": "/home/runner/work/sample_app_6th_ed/sample_app_6th_ed/test/integration/users_edit_test.rb:21",
+        "recorder": {
+          "name": "minitest",
+          "type": "tests"
+        },
+        "test_status": "succeeded"
+      },
+      "minitest/Users_index_index_as_admin_including_pagination_and_delete_links": {
+        "app": "sample_app_6th_ed",
+        "language": {
+          "name": "ruby",
+          "engine": "ruby",
+          "version": "2.6.3"
+        },
+        "client": {
+          "name": "appmap",
+          "url": "https://github.com/applandinc/appmap-ruby",
+          "version": "0.98.1"
+        },
+        "frameworks": [
+          {
+            "name": "rails",
+            "version": "6.0.3.2"
+          },
+          {
+            "name": "minitest",
+            "version": "5.11.3"
+          }
+        ],
+        "git": {
+          "repository": "https://github.com/land-of-apps/sample_app_6th_ed",
+          "branch": "HEAD",
+          "commit": "2abc5b7bd55a29df41d63f7c0a088cf0d42f7d87",
+          "status": [
+            "M Gemfile",
+            "M Gemfile.lock",
+            "A appmap.yml",
+            "?? patch"
+          ],
+          "git_last_annotated_tag": null,
+          "git_last_tag": null,
+          "git_commits_since_last_annotated_tag": null,
+          "git_commits_since_last_tag": null
+        },
+        "name": "Users_index index as admin including pagination and delete links",
+        "source_location": "/home/runner/work/sample_app_6th_ed/sample_app_6th_ed/test/integration/users_index_test.rb:10",
+        "recorder": {
+          "name": "minitest",
+          "type": "tests"
+        },
+        "test_status": "succeeded"
+      },
+      "minitest/Users_index_index_as_non-admin": {
+        "app": "sample_app_6th_ed",
+        "language": {
+          "name": "ruby",
+          "engine": "ruby",
+          "version": "2.6.3"
+        },
+        "client": {
+          "name": "appmap",
+          "url": "https://github.com/applandinc/appmap-ruby",
+          "version": "0.98.1"
+        },
+        "frameworks": [
+          {
+            "name": "rails",
+            "version": "6.0.3.2"
+          },
+          {
+            "name": "minitest",
+            "version": "5.11.3"
+          }
+        ],
+        "git": {
+          "repository": "https://github.com/land-of-apps/sample_app_6th_ed",
+          "branch": "HEAD",
+          "commit": "2abc5b7bd55a29df41d63f7c0a088cf0d42f7d87",
+          "status": [
+            "M Gemfile",
+            "M Gemfile.lock",
+            "A appmap.yml",
+            "?? patch"
+          ],
+          "git_last_annotated_tag": null,
+          "git_last_tag": null,
+          "git_commits_since_last_annotated_tag": null,
+          "git_commits_since_last_tag": null
+        },
+        "name": "Users_index index as non-admin",
+        "source_location": "/home/runner/work/sample_app_6th_ed/sample_app_6th_ed/test/integration/users_index_test.rb:27",
+        "recorder": {
+          "name": "minitest",
+          "type": "tests"
+        },
+        "test_status": "succeeded"
+      },
+      "minitest/Users_login_login_with_remembering": {
+        "app": "sample_app_6th_ed",
+        "language": {
+          "name": "ruby",
+          "engine": "ruby",
+          "version": "2.6.3"
+        },
+        "client": {
+          "name": "appmap",
+          "url": "https://github.com/applandinc/appmap-ruby",
+          "version": "0.98.1"
+        },
+        "frameworks": [
+          {
+            "name": "rails",
+            "version": "6.0.3.2"
+          },
+          {
+            "name": "minitest",
+            "version": "5.11.3"
+          }
+        ],
+        "git": {
+          "repository": "https://github.com/land-of-apps/sample_app_6th_ed",
+          "branch": "HEAD",
+          "commit": "2abc5b7bd55a29df41d63f7c0a088cf0d42f7d87",
+          "status": [
+            "M Gemfile",
+            "M Gemfile.lock",
+            "A appmap.yml",
+            "?? patch"
+          ],
+          "git_last_annotated_tag": null,
+          "git_last_tag": null,
+          "git_commits_since_last_annotated_tag": null,
+          "git_commits_since_last_tag": null
+        },
+        "name": "Users_login login with remembering",
+        "source_location": "/home/runner/work/sample_app_6th_ed/sample_app_6th_ed/test/integration/users_login_test.rb:43",
+        "recorder": {
+          "name": "minitest",
+          "type": "tests"
+        },
+        "test_status": "succeeded"
+      },
+      "minitest/Users_login_login_with_valid_email_invalid_password": {
+        "app": "sample_app_6th_ed",
+        "language": {
+          "name": "ruby",
+          "engine": "ruby",
+          "version": "2.6.3"
+        },
+        "client": {
+          "name": "appmap",
+          "url": "https://github.com/applandinc/appmap-ruby",
+          "version": "0.98.1"
+        },
+        "frameworks": [
+          {
+            "name": "rails",
+            "version": "6.0.3.2"
+          },
+          {
+            "name": "minitest",
+            "version": "5.11.3"
+          }
+        ],
+        "git": {
+          "repository": "https://github.com/land-of-apps/sample_app_6th_ed",
+          "branch": "HEAD",
+          "commit": "2abc5b7bd55a29df41d63f7c0a088cf0d42f7d87",
+          "status": [
+            "M Gemfile",
+            "M Gemfile.lock",
+            "A appmap.yml",
+            "?? patch"
+          ],
+          "git_last_annotated_tag": null,
+          "git_last_tag": null,
+          "git_commits_since_last_annotated_tag": null,
+          "git_commits_since_last_tag": null
+        },
+        "name": "Users_login login with valid email/invalid password",
+        "source_location": "/home/runner/work/sample_app_6th_ed/sample_app_6th_ed/test/integration/users_login_test.rb:9",
+        "recorder": {
+          "name": "minitest",
+          "type": "tests"
+        },
+        "test_status": "succeeded"
+      },
+      "minitest/Users_login_login_with_valid_information_followed_by_logout": {
+        "app": "sample_app_6th_ed",
+        "language": {
+          "name": "ruby",
+          "engine": "ruby",
+          "version": "2.6.3"
+        },
+        "client": {
+          "name": "appmap",
+          "url": "https://github.com/applandinc/appmap-ruby",
+          "version": "0.98.1"
+        },
+        "frameworks": [
+          {
+            "name": "rails",
+            "version": "6.0.3.2"
+          },
+          {
+            "name": "minitest",
+            "version": "5.11.3"
+          }
+        ],
+        "git": {
+          "repository": "https://github.com/land-of-apps/sample_app_6th_ed",
+          "branch": "HEAD",
+          "commit": "2abc5b7bd55a29df41d63f7c0a088cf0d42f7d87",
+          "status": [
+            "M Gemfile",
+            "M Gemfile.lock",
+            "A appmap.yml",
+            "?? patch"
+          ],
+          "git_last_annotated_tag": null,
+          "git_last_tag": null,
+          "git_commits_since_last_annotated_tag": null,
+          "git_commits_since_last_tag": null
+        },
+        "name": "Users_login login with valid information followed by logout",
+        "source_location": "/home/runner/work/sample_app_6th_ed/sample_app_6th_ed/test/integration/users_login_test.rb:21",
+        "recorder": {
+          "name": "minitest",
+          "type": "tests"
+        },
+        "test_status": "succeeded"
+      },
+      "minitest/Users_login_login_without_remembering": {
+        "app": "sample_app_6th_ed",
+        "language": {
+          "name": "ruby",
+          "engine": "ruby",
+          "version": "2.6.3"
+        },
+        "client": {
+          "name": "appmap",
+          "url": "https://github.com/applandinc/appmap-ruby",
+          "version": "0.98.1"
+        },
+        "frameworks": [
+          {
+            "name": "rails",
+            "version": "6.0.3.2"
+          },
+          {
+            "name": "minitest",
+            "version": "5.11.3"
+          }
+        ],
+        "git": {
+          "repository": "https://github.com/land-of-apps/sample_app_6th_ed",
+          "branch": "HEAD",
+          "commit": "2abc5b7bd55a29df41d63f7c0a088cf0d42f7d87",
+          "status": [
+            "M Gemfile",
+            "M Gemfile.lock",
+            "A appmap.yml",
+            "?? patch"
+          ],
+          "git_last_annotated_tag": null,
+          "git_last_tag": null,
+          "git_commits_since_last_annotated_tag": null,
+          "git_commits_since_last_tag": null
+        },
+        "name": "Users_login login without remembering",
+        "source_location": "/home/runner/work/sample_app_6th_ed/sample_app_6th_ed/test/integration/users_login_test.rb:48",
+        "recorder": {
+          "name": "minitest",
+          "type": "tests"
+        },
+        "test_status": "succeeded"
+      },
+      "minitest/Users_signup_valid_signup_information_with_account_activation": {
+        "app": "sample_app_6th_ed",
+        "language": {
+          "name": "ruby",
+          "engine": "ruby",
+          "version": "2.6.3"
+        },
+        "client": {
+          "name": "appmap",
+          "url": "https://github.com/applandinc/appmap-ruby",
+          "version": "0.98.1"
+        },
+        "frameworks": [
+          {
+            "name": "rails",
+            "version": "6.0.3.2"
+          },
+          {
+            "name": "minitest",
+            "version": "5.11.3"
+          }
+        ],
+        "git": {
+          "repository": "https://github.com/land-of-apps/sample_app_6th_ed",
+          "branch": "HEAD",
+          "commit": "2abc5b7bd55a29df41d63f7c0a088cf0d42f7d87",
+          "status": [
+            "M Gemfile",
+            "M Gemfile.lock",
+            "A appmap.yml",
+            "?? patch"
+          ],
+          "git_last_annotated_tag": null,
+          "git_last_tag": null,
+          "git_commits_since_last_annotated_tag": null,
+          "git_commits_since_last_tag": null
+        },
+        "name": "Users_signup valid signup information with account activation",
+        "source_location": "/home/runner/work/sample_app_6th_ed/sample_app_6th_ed/test/integration/users_signup_test.rb:22",
+        "recorder": {
+          "name": "minitest",
+          "type": "tests"
+        },
+        "test_status": "succeeded"
+      },
+      "minitest/Users_signup_invalid_signup_information": {
+        "app": "sample_app_6th_ed",
+        "language": {
+          "name": "ruby",
+          "engine": "ruby",
+          "version": "2.6.3"
+        },
+        "client": {
+          "name": "appmap",
+          "url": "https://github.com/applandinc/appmap-ruby",
+          "version": "0.98.1"
+        },
+        "frameworks": [
+          {
+            "name": "rails",
+            "version": "6.0.3.2"
+          },
+          {
+            "name": "minitest",
+            "version": "5.11.3"
+          }
+        ],
+        "git": {
+          "repository": "https://github.com/land-of-apps/sample_app_6th_ed",
+          "branch": "HEAD",
+          "commit": "2abc5b7bd55a29df41d63f7c0a088cf0d42f7d87",
+          "status": [
+            "M Gemfile",
+            "M Gemfile.lock",
+            "A appmap.yml",
+            "?? patch"
+          ],
+          "git_last_annotated_tag": null,
+          "git_last_tag": null,
+          "git_commits_since_last_annotated_tag": null,
+          "git_commits_since_last_tag": null
+        },
+        "name": "Users_signup invalid signup information",
+        "source_location": "/home/runner/work/sample_app_6th_ed/sample_app_6th_ed/test/integration/users_signup_test.rb:9",
+        "recorder": {
+          "name": "minitest",
+          "type": "tests"
+        },
+        "test_status": "succeeded"
+      }
+    }
+  }
+}

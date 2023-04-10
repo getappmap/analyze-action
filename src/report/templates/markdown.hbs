@@ -1,0 +1,38 @@
+# AppMap
+
+
+| Summary | Status |
+| --- | --- |
+| Affected tests | :warning: {{testFailures.length}} not passing |
+| API changes | :warning: {{apiChanges.length}} route affected |
+| Performance analysis | :check: Passing |
+| Security analysis | :warning: {{newFindings.length}} new vulnerabilities |
+| Code behavior | :wrench: {{sequenceDiagramDiffSnippets.length}} changes |
+
+## Test failures
+{#each testFailures}
+- {{.}}
+{{/each}}
+
+## API changes
+{{!-- TODO --}}
+
+## Changed AppMaps
+{#each changedAppMaps}
+- {{.}}
+{{/each}}
+
+## Performance analysis
+{#each performanceAnalysis}
+- {{.}}
+{{/each}}
+
+## Security analysis
+{#each newFindings}
+- {{.}}
+{{/each}}
+
+## Code behavior
+{#each sequenceDiagramDiffSnippets}
+- {{.}}
+{{/each}}
