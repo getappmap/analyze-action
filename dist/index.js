@@ -613,6 +613,38 @@ exports["default"] = log;
 
 /***/ }),
 
+/***/ 7285:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const runtime_1 = __importDefault(__nccwpck_require__(770));
+const markdown_hbs_1 = __importDefault(__nccwpck_require__(9378));
+class MarkdownReport {
+    generateReport(comparisonResult) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return runtime_1.default.compile(markdown_hbs_1.default)(comparisonResult);
+        });
+    }
+}
+exports["default"] = MarkdownReport;
+
+
+/***/ }),
+
 /***/ 8082:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -638,6 +670,7 @@ const promises_1 = __nccwpck_require__(3292);
 const path_1 = __nccwpck_require__(1017);
 const Archiver_1 = __importDefault(__nccwpck_require__(1626));
 const fs_1 = __nccwpck_require__(7147);
+const MarkdownReport_1 = __importDefault(__nccwpck_require__(7285));
 function run(artifactStore, options) {
     return __awaiter(this, void 0, void 0, function* () {
         const baseRevision = (yield (0, executeCommand_1.executeCommand)(`git rev-parse ${options.baseRef}`)).trim();
@@ -667,6 +700,12 @@ function run(artifactStore, options) {
         if (options.sourceDir)
             comparer.sourceDir = options.sourceDir;
         yield comparer.compare();
+        if (process.env.GITHUB_STEP_SUMMARY) {
+            const changeReport = yield (0, promises_1.readFile)((0, path_1.join)(outputDir, 'change-report.json'), 'utf-8');
+            const reporter = new MarkdownReport_1.default();
+            const report = yield reporter.generateReport(JSON.parse(changeReport));
+            yield (0, promises_1.writeFile)(process.env.GITHUB_STEP_SUMMARY, report);
+        }
     });
 }
 exports["default"] = run;
@@ -14429,6 +14468,22 @@ function wrappy (fn, cb) {
     return ret
   }
 }
+
+
+/***/ }),
+
+/***/ 9378:
+/***/ ((module) => {
+
+module.exports = eval("require")("./templates/markdown.hbs");
+
+
+/***/ }),
+
+/***/ 770:
+/***/ ((module) => {
+
+module.exports = eval("require")("handlebars/runtime");
 
 
 /***/ }),
