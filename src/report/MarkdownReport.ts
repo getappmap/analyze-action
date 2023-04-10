@@ -10,6 +10,15 @@ const Template = Handlebars.compile(
 
 export default class MarkdownReport implements Report {
   async generateReport(changeReport: ChangeReport): Promise<string> {
+    delete changeReport.sequenceDiagramDiffSnippets[''];
+    changeReport.apiDiff.differenceCount =
+      changeReport.apiDiff.breakingDifferences.length +
+      changeReport.apiDiff.nonBreakingDifferences.length +
+      changeReport.apiDiff.unclassifiedDifferences.length;
+    (changeReport as any).sequenceDiagramDiffSnippetCount = Object.keys(
+      changeReport.sequenceDiagramDiffSnippets
+    ).length;
+
     return Template(changeReport);
   }
 }

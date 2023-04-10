@@ -41,8 +41,12 @@ export default async function run(
   if (options.sourceDir) comparer.sourceDir = options.sourceDir;
   await comparer.compare();
 
+  const summary = await summarizeChanges(outputDir);
+  return {summary};
+}
+
+export async function summarizeChanges(outputDir: string): Promise<string> {
   const changeReport = await readFile(join(outputDir, 'change-report.json'), 'utf-8');
   const reporter = new MarkdownReport();
-  const summary = await reporter.generateReport(JSON.parse(changeReport));
-  return {summary};
+  return await reporter.generateReport(JSON.parse(changeReport));
 }

@@ -1,38 +1,99 @@
 # AppMap
 
-
 | Summary | Status |
 | --- | --- |
-| Affected tests | :warning: {{testFailures.length}} not passing |
-| API changes | :warning: {{apiChanges.length}} route affected |
-| Performance analysis | :check: Passing |
-| Security analysis | :warning: {{newFindings.length}} new vulnerabilities |
-| Code behavior | :wrench: {{sequenceDiagramDiffSnippets.length}} changes |
+| [Test failures](#test-failures) | :warning: {{testFailures.length}} failed |
+| [API changes](#api-changes) | 
+  {{~#if apiDiff.breakingDifferencesFound }}:warning:{{/if~}}
+  {{~#unless apiDiff.breakingDifferencesFound }}:wrench:{{/unless~}}
+  &nbsp;{{apiDiff.differenceCount}}
+  {{~#if apiDiff.breakingDifferencesFound }} breaking {{/if~}}
+  {{~#unless apiDiff.breakingDifferencesFound }} compatible {{/unless~}}
+  changes |
+| [Changed AppMaps](#changed-appmaps) | :wrench: {{changedAppMaps.length}} changes |
+| [Changed Code Behavior](#changed-code-behavior) | :wrench: {{sequenceDiagramDiffSnippetCount}} changes |
 
 ## Test failures
-{#each testFailures}
-- {{.}}
+
+{{#each testFailures}}
+
+<details>
+<summary>
+{{testLocation}}
+</summary>
+
+[{{testLocation}}]({{testLocation}}) 
+
+[{{appmap}}](./head/{{appmap}}.appmap.json)
+
+</details>
+
 {{/each}}
 
 ## API changes
-{{!-- TODO --}}
+
+{{#*inline "api-diff"}}
+{{action}} {{#each sourceSpecEntityDetails}}{{location}}{{/each}}
+{{/inline}}
+
+{{#if apiDiff.breakingDifferences}}
+### Breaking changes
+
+{{#each apiDiff.breakingDifferences}}
+  - {{> api-diff }}
+{{/each}}
+{{/if}}
+
+{{#if apiDiff.nonBreakingDifferences}}
+### Non-breaking changes
+
+{{#each apiDiff.nonBreakingDifferences}}
+  - {{> api-diff }}
+{{/each}}
+{{/if}}
+
+{{#if apiDiff.unclassifiedDifferences}}
+### Unclassified changes
+
+{{#each apiDiff.unclassifiedDifferences}}
+  - {{> api-diff }}
+{{/each}}
+{{/if}}
 
 ## Changed AppMaps
-{#each changedAppMaps}
-- {{.}}
+{{#each changedAppMaps}}
+<details>
+
+<summary>
+  {{appmap}}
+</summary>
+
+_Source diff_
+```
+{{{sourceDiff}}}
+```
+
+_Sequence diagram diff_
+
+[{{sequenceDiagramDiff}}](./{{sequenceDiagramDiff}})
+</details>
+
 {{/each}}
 
-## Performance analysis
-{#each performanceAnalysis}
-- {{.}}
-{{/each}}
+## Changed code behavior
 
-## Security analysis
-{#each newFindings}
-- {{.}}
-{{/each}}
+{{#each sequenceDiagramDiffSnippets}}
 
-## Code behavior
-{#each sequenceDiagramDiffSnippets}
-- {{.}}
+```
+{{{@key}}}
+```
+
+<details>
+<summary>{{ this.length }} occurrances</summary>
+
+{{#each this}}
+- [{{.}}](./diff/{{.}}.diff.sequence.json)
+{{/each}}
+</details>
+
 {{/each}}
