@@ -643,6 +643,12 @@ const Template = handlebars_1.default.compile((0, fs_1.readFileSync)((0, path_1.
 class MarkdownReport {
     generateReport(changeReport) {
         return __awaiter(this, void 0, void 0, function* () {
+            delete changeReport.sequenceDiagramDiffSnippets[''];
+            changeReport.apiDiff.differenceCount =
+                changeReport.apiDiff.breakingDifferences.length +
+                    changeReport.apiDiff.nonBreakingDifferences.length +
+                    changeReport.apiDiff.unclassifiedDifferences.length;
+            changeReport.sequenceDiagramDiffSnippetCount = Object.keys(changeReport.sequenceDiagramDiffSnippets).length;
             return Template(changeReport);
         });
     }
@@ -670,6 +676,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.summarizeChanges = void 0;
 const Compare_1 = __importDefault(__nccwpck_require__(8572));
 const Restore_1 = __importDefault(__nccwpck_require__(297));
 const executeCommand_1 = __nccwpck_require__(3285);
@@ -707,13 +714,19 @@ function run(artifactStore, options) {
         if (options.sourceDir)
             comparer.sourceDir = options.sourceDir;
         yield comparer.compare();
-        const changeReport = yield (0, promises_1.readFile)((0, path_1.join)(outputDir, 'change-report.json'), 'utf-8');
-        const reporter = new MarkdownReport_1.default();
-        const summary = yield reporter.generateReport(JSON.parse(changeReport));
+        const summary = yield summarizeChanges(outputDir);
         return { summary };
     });
 }
 exports["default"] = run;
+function summarizeChanges(outputDir) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const changeReport = yield (0, promises_1.readFile)((0, path_1.join)(outputDir, 'change-report.json'), 'utf-8');
+        const reporter = new MarkdownReport_1.default();
+        return yield reporter.generateReport(JSON.parse(changeReport));
+    });
+}
+exports.summarizeChanges = summarizeChanges;
 
 
 /***/ }),
