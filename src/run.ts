@@ -5,7 +5,7 @@ import {mkdir} from 'fs/promises';
 import {join} from 'path';
 import Archiver from './Archiver';
 import ArtifactStore from './ArtifactStore';
-import {CommandOptions} from './index';
+import {CommandOptions} from './CommandOptions';
 import {existsSync} from 'fs';
 
 export default async function run(artifactStore: ArtifactStore, options: CommandOptions) {

@@ -1,28 +1,12 @@
 import * as core from '@actions/core';
-import * as artifact from '@actions/artifact';
 import {ArgumentParser} from 'argparse';
 
 import {ActionLogger, setLogger} from './log';
 import verbose from './verbose';
 import assert from 'assert';
-import ArtifactStore, {DirectoryArtifactStore} from './ArtifactStore';
+import {DirectoryArtifactStore} from './DirectoryArtifactStore';
 import run from './run';
-
-export interface CommandOptions {
-  baseRef: string;
-  headRef: string;
-  appmapCommand?: string;
-  sourceDir?: string;
-  githubToken?: string;
-  githubRepo?: string;
-}
-
-class GitHubArtifactStore implements ArtifactStore {
-  async uploadArtifact(name: string, files: string[]): Promise<void> {
-    const artifactClient = artifact.create();
-    await artifactClient.uploadArtifact(name, files, process.cwd());
-  }
-}
+import {GitHubArtifactStore} from './GitHubArtifactStore';
 
 async function runInGitHub(): Promise<void> {
   verbose(core.getBooleanInput('verbose'));
@@ -66,15 +50,17 @@ async function runLocally() {
   parser.add_argument('--source-dir');
   parser.add_argument('--github-token');
   parser.add_argument('--github-repo');
+  parser.add_argument('--artifact-dir', {default: '.appmap/artifacts'});
 
   const options = parser.parse_args();
 
   verbose(options.verbose === 'true' || options.verbose === true);
-  const outputDir = options.outputDir || '.appmap/artifacts';
+  const artifactDir = options.artifact_dir;
+  assert(artifactDir);
   const directory = options.directory;
   if (directory) process.chdir(directory);
 
-  await run(new DirectoryArtifactStore(outputDir), {
+  await run(new DirectoryArtifactStore(artifactDir), {
     appmapCommand: options.appmap_command,
     baseRef: options.base_revision,
     headRef: options.head_revision,

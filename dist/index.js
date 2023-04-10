@@ -97,69 +97,6 @@ exports["default"] = Archiver;
 
 /***/ }),
 
-/***/ 5095:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.DirectoryArtifactStore = void 0;
-const promises_1 = __nccwpck_require__(3292);
-const path_1 = __nccwpck_require__(1017);
-const log_1 = __importStar(__nccwpck_require__(1285));
-class DirectoryArtifactStore {
-    constructor(directory) {
-        this.directory = directory;
-    }
-    uploadArtifact(name, files) {
-        return __awaiter(this, void 0, void 0, function* () {
-            yield (0, promises_1.mkdir)(this.directory, { recursive: true });
-            (0, log_1.default)(log_1.LogLevel.Info, `Storing artifact ${name} in ${this.directory}`);
-            for (const file of files) {
-                (0, log_1.default)(log_1.LogLevel.Info, `\tFile ${file}`);
-                const target = (0, path_1.join)(this.directory, (0, path_1.basename)(file));
-                yield (0, promises_1.copyFile)(file, target);
-            }
-        });
-    }
-}
-exports.DirectoryArtifactStore = DirectoryArtifactStore;
-
-
-/***/ }),
-
 /***/ 8572:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -240,6 +177,122 @@ class Compare {
     }
 }
 exports["default"] = Compare;
+
+
+/***/ }),
+
+/***/ 6227:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DirectoryArtifactStore = void 0;
+const promises_1 = __nccwpck_require__(3292);
+const path_1 = __nccwpck_require__(1017);
+const log_1 = __importStar(__nccwpck_require__(1285));
+class DirectoryArtifactStore {
+    constructor(directory) {
+        this.directory = directory;
+    }
+    uploadArtifact(name, files) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield (0, promises_1.mkdir)(this.directory, { recursive: true });
+            (0, log_1.default)(log_1.LogLevel.Info, `Storing artifact ${name} in ${this.directory}`);
+            for (const file of files) {
+                (0, log_1.default)(log_1.LogLevel.Info, `\tFile ${file}`);
+                const target = (0, path_1.join)(this.directory, (0, path_1.basename)(file));
+                yield (0, promises_1.copyFile)(file, target);
+            }
+        });
+    }
+}
+exports.DirectoryArtifactStore = DirectoryArtifactStore;
+
+
+/***/ }),
+
+/***/ 4389:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GitHubArtifactStore = void 0;
+const artifact = __importStar(__nccwpck_require__(2605));
+class GitHubArtifactStore {
+    uploadArtifact(name, files) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const artifactClient = artifact.create();
+            yield artifactClient.uploadArtifact(name, files, process.cwd());
+        });
+    }
+}
+exports.GitHubArtifactStore = GitHubArtifactStore;
 
 
 /***/ }),
@@ -422,21 +475,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
-const artifact = __importStar(__nccwpck_require__(2605));
 const argparse_1 = __nccwpck_require__(1515);
 const log_1 = __nccwpck_require__(1285);
 const verbose_1 = __importDefault(__nccwpck_require__(1753));
 const assert_1 = __importDefault(__nccwpck_require__(9491));
-const ArtifactStore_1 = __nccwpck_require__(5095);
+const DirectoryArtifactStore_1 = __nccwpck_require__(6227);
 const run_1 = __importDefault(__nccwpck_require__(8082));
-class GitHubArtifactStore {
-    uploadArtifact(name, files) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const artifactClient = artifact.create();
-            yield artifactClient.uploadArtifact(name, files, process.cwd());
-        });
-    }
-}
+const GitHubArtifactStore_1 = __nccwpck_require__(4389);
 function runInGitHub() {
     return __awaiter(this, void 0, void 0, function* () {
         (0, verbose_1.default)(core.getBooleanInput('verbose'));
@@ -452,7 +497,7 @@ function runInGitHub() {
         const githubRepo = process.env.GITHUB_REPOSITORY;
         (0, assert_1.default)(baseRef, 'baseRef is undefined');
         (0, assert_1.default)(headRef, 'headRef is undefined');
-        yield (0, run_1.default)(new GitHubArtifactStore(), {
+        yield (0, run_1.default)(new GitHubArtifactStore_1.GitHubArtifactStore(), {
             baseRef,
             headRef,
             sourceDir,
@@ -474,13 +519,15 @@ function runLocally() {
         parser.add_argument('--source-dir');
         parser.add_argument('--github-token');
         parser.add_argument('--github-repo');
+        parser.add_argument('--artifact-dir', { default: '.appmap/artifacts' });
         const options = parser.parse_args();
         (0, verbose_1.default)(options.verbose === 'true' || options.verbose === true);
-        const outputDir = options.outputDir || '.appmap/artifacts';
+        const artifactDir = options.artifact_dir;
+        (0, assert_1.default)(artifactDir);
         const directory = options.directory;
         if (directory)
             process.chdir(directory);
-        yield (0, run_1.default)(new ArtifactStore_1.DirectoryArtifactStore(outputDir), {
+        yield (0, run_1.default)(new DirectoryArtifactStore_1.DirectoryArtifactStore(artifactDir), {
             appmapCommand: options.appmap_command,
             baseRef: options.base_revision,
             headRef: options.head_revision,
