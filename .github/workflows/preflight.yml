@@ -1,0 +1,34 @@
+name: Preflight
+
+on:
+  pull_request:
+
+env:
+  APPMAP_TELEMETRY_DISABLED: 'true'
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          # This is needed to see the version history, because
+          # checkout action doesn't fetch the base or head branches
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+      - name: Install dependency libraries
+        run: yarn install
+      - name: Install and configure AppMap
+        uses: getappmap/install-appmap-action@v1-pre.6
+      - name: Build
+        run: yarn build
+      - name: Make AppMaps
+        run: yarn appmap || true
+      - name: Preflight
+        uses: ./
+        with:
+          base-revision: ${{ github.event.pull_request.base.sha }}
+          head-revision: ${{ github.event.pull_request.head.sha }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          verbose: true

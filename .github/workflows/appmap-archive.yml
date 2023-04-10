@@ -1,3 +1,5 @@
+name: Archive AppMaps on PR merge
+
 on:
   pull_request:
     types:
