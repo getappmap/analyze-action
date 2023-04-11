@@ -42,15 +42,15 @@ export default async function run(
   if (options.sourceDir) comparer.sourceDir = options.sourceDir;
   await comparer.compare();
 
-  const summary = await summarizeChanges(options.baseDir || process.cwd(), outputDir);
+  const summary = await summarizeChanges(options.basePath || process.cwd(), outputDir);
   return {summary};
 }
 
-export async function summarizeChanges(baseDir: string, outputDir: string): Promise<string> {
+export async function summarizeChanges(basePath: string, outputDir: string): Promise<string> {
   const changeReport = JSON.parse(
     await readFile(join(outputDir, 'change-report.json'), 'utf-8')
   ) as ChangeReport;
 
   const reporter = new MarkdownReport();
-  return await reporter.generateReport(changeReport, baseDir);
+  return await reporter.generateReport(changeReport, basePath);
 }

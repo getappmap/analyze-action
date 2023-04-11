@@ -30,9 +30,12 @@ async function runInGitHub(): Promise<void> {
   assert(baseRef, 'baseRef is undefined');
   assert(headRef, 'headRef is undefined');
 
+  const basePath = [process.env.GITHUB_SERVER_URL, githubRepo, 'tree', baseRef].join('/');
+
   const {summary} = await run(new GitHubArtifactStore(), {
     baseRef,
     headRef,
+    basePath,
     sourceDir,
     githubRepo,
     githubToken,
