@@ -8,8 +8,17 @@ const Template = Handlebars.compile(
   readFileSync(join(__dirname, 'templates', 'markdown.hbs'), 'utf8')
 );
 
+function isURL(path: string): boolean {
+  try {
+    new URL(path);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 export default class MarkdownReport implements Report {
-  async generateReport(changeReport: ChangeReport, baseDir: string): Promise<string> {
+  async generateReport(changeReport: ChangeReport, basePath: string): Promise<string> {
     // Remove the empty sequence diagram diff snippet - which can't be reasonably rendered.
     delete changeReport.sequenceDiagramDiffSnippets[''];
 
@@ -28,7 +37,17 @@ export default class MarkdownReport implements Report {
     changeReport.testFailures
       .filter(failure => failure.testLocation)
       .forEach(failure => {
-        (failure as any).testPath = join(baseDir, failure.testLocation!.split(':').shift()!);
+        const tokens = failure.testLocation!.split(':');
+        tokens.pop();
+        let testPath = tokens.join(':');
+        let path: string;
+        console.log(testPath, basePath);
+        if (isURL(basePath)) {
+          path = new URL(testPath, basePath).toString();
+        } else {
+          path = join(basePath, testPath);
+        }
+        (failure as any).testPath = path;
       });
 
     // Provide a simple count of the number of differences - since Handlebars can't do math.
