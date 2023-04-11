@@ -8,6 +8,7 @@ import {DirectoryArtifactStore} from './DirectoryArtifactStore';
 import run from './run';
 import {GitHubArtifactStore} from './GitHubArtifactStore';
 import {writeFile} from 'fs/promises';
+import {join} from 'path';
 
 async function runInGitHub(): Promise<void> {
   verbose(core.getBooleanInput('verbose'));
@@ -75,7 +76,8 @@ async function runLocally() {
     githubToken: options.github_token,
     githubRepo: options.github_repo,
   });
-  console.log(summary);
+
+  await writeFile(join(summary.outputDir, 'report.md'), summary.summary);
 }
 
 if (require.main === module) {

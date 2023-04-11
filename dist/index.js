@@ -43,7 +43,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const fs_1 = __nccwpck_require__(7147);
-const promises_1 = __nccwpck_require__(3292);
 const path_1 = __nccwpck_require__(1017);
 const executeCommand_1 = __nccwpck_require__(3285);
 const log_1 = __importStar(__nccwpck_require__(1285));
@@ -65,14 +64,17 @@ class Archiver {
             const archiveFiles = [
                 (0, path_1.join)('.appmap', 'archive', 'full', `${this.revision}.tar`),
                 (0, path_1.join)('.appmap', 'archive', 'incremental', `${this.revision}.tar`),
-            ].filter(file => (0, fs_1.existsSync)(file));
+            ]
+                .filter(file => (0, fs_1.existsSync)(file))
+                // With alphabetical sort, 'full' archive will be preferred to 'incremental'
+                .sort((a, b) => a.localeCompare(b));
             if (archiveFiles.length === 0) {
                 throw new Error(`No AppMap archives found in ${process.cwd()}`);
             }
             if (archiveFiles.length > 1) {
-                (0, log_1.default)(log_1.LogLevel.Warn, `Mulitple AppMap archives found in ${process.cwd()}`);
+                (0, log_1.default)(log_1.LogLevel.Warn, `Multiple AppMap archives found in ${process.cwd()}: ${archiveFiles.join(', ')}`);
             }
-            const archiveFile = archiveFiles.pop();
+            const archiveFile = archiveFiles.shift();
             (0, log_1.default)(log_1.LogLevel.Debug, `Processing AppMap archive ${archiveFile}`);
             // e.g. .appmap/archive/full
             const dir = (0, path_1.dirname)(archiveFile);
@@ -86,9 +88,11 @@ class Archiver {
     }
     unpack(archiveFile, directory) {
         return __awaiter(this, void 0, void 0, function* () {
-            (0, log_1.default)(log_1.LogLevel.Info, `Unpacking AppMap archive ${archiveFile} into ${directory}`);
-            yield (0, promises_1.mkdir)(directory, { recursive: true });
-            yield (0, executeCommand_1.executeCommand)(`tar -C ${directory} -xf ${archiveFile}`);
+            (0, log_1.default)(log_1.LogLevel.Info, `Restoring AppMap archive ${archiveFile} into ${directory}`);
+            let restoreCommand = `${this.appmapCommand} restore --exact --revision ${this.revision} --output-dir ${directory}`;
+            if ((0, verbose_1.default)())
+                restoreCommand += ' --verbose';
+            yield (0, executeCommand_1.executeCommand)(restoreCommand);
         });
     }
 }
@@ -483,6 +487,7 @@ const DirectoryArtifactStore_1 = __nccwpck_require__(6227);
 const run_1 = __importDefault(__nccwpck_require__(8082));
 const GitHubArtifactStore_1 = __nccwpck_require__(4389);
 const promises_1 = __nccwpck_require__(3292);
+const path_1 = __nccwpck_require__(1017);
 function runInGitHub() {
     return __awaiter(this, void 0, void 0, function* () {
         (0, verbose_1.default)(core.getBooleanInput('verbose'));
@@ -541,7 +546,7 @@ function runLocally() {
             githubToken: options.github_token,
             githubRepo: options.github_repo,
         });
-        console.log(summary);
+        yield (0, promises_1.writeFile)((0, path_1.join)(summary.outputDir, 'report.md'), summary.summary);
     });
 }
 if (require.main === require.cache[eval('__filename')]) {
@@ -754,7 +759,7 @@ function run(artifactStore, options) {
             comparer.sourceDir = options.sourceDir;
         yield comparer.compare();
         const summary = yield summarizeChanges(options.basePath || process.cwd(), outputDir);
-        return { summary };
+        return { summary, outputDir };
     });
 }
 exports["default"] = run;
