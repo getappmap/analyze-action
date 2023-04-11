@@ -13,7 +13,7 @@ import {ChangeReport} from './report/ChangeReport';
 export default async function run(
   artifactStore: ArtifactStore,
   options: CommandOptions
-): Promise<{summary: string}> {
+): Promise<{summary: string; outputDir: string}> {
   const baseRevision = (await executeCommand(`git rev-parse ${options.baseRef}`)).trim();
   const headRevision = (await executeCommand(`git rev-parse ${options.headRef}`)).trim();
 
@@ -43,7 +43,7 @@ export default async function run(
   await comparer.compare();
 
   const summary = await summarizeChanges(options.basePath || process.cwd(), outputDir);
-  return {summary};
+  return {summary, outputDir};
 }
 
 export async function summarizeChanges(basePath: string, outputDir: string): Promise<string> {
