@@ -24,7 +24,7 @@
   :wrench: {{changedAppMaps.length}} changes
   {{~/if}}
   |
-| [Changed Code Behavior](#changed-code-behavior) |
+| [Changed code behavior](#changed-code-behavior) |
   {{~#unless sequenceDiagramDiffSnippetCount }}
   :white_check_mark: No changes
   {{~/unless}}
@@ -33,53 +33,41 @@
   {{~/if}}
   |
 
-## Test failures
+
+{{#if testFailures.length}}
+<h2 id="test-failures">Test failures</h2>
 
 {{#each testFailures}}
 
-<details>
-<summary>
-{{testLocation}}
-</summary>
+### Test [{{testLocation}}](testPath) failed
 
-<table>
-  <tbody>
-    <tr>
-      <td>Test case file</td> 
-      <td><a href="{{testPath}}">{{testLocation}}</a></td>
-    </tr>
-    {{#if changedAppMap}}
-    {{#with changedAppMap}}
-    <tr>
-      <td>Sequence diagram diff</td>
-      <td>
-        <a href="./{{sequenceDiagramDiff}}">{{sequenceDiagramDiff}}</a>
-      </td>
-    </tr>
-    <tr>
-      <td>Source diff</td>
-      <td>
+{{#if changedAppMap}}
+{{#with changedAppMap}}
 
-        ```diff
-        {{sourceDiff}}
-        ```
+The following code changes may have affected this test:
 
-      </td>
-    </tr>
-    {{/with}}
-    {{/if}}
-    <tr>
-      <td>AppMap</td>
-      <td><a href="./head/{{appmap}}.appmap.json">{{appmap}}</a></td>
-    </tr>
-  </tbody>
-</table>
+```diff
+{{sourceDiff}}
+```
+{{/with}}
+{{/if}}
 
-</details>
+
+| Diagram | Link |
+| --- | --- |
+{{#if changedAppMap}}
+{{#with changedAppMap}}
+| Sequence diagram diff | [{{sequenceDiagramDiff}}](./{{sequenceDiagramDiff}}) |
+{{/with}}
+{{/if}}
+| AppMap | [{{appmap}}](./head/{{appmap}}.appmap.json) |
 
 {{/each}}
+{{/if}}
 
-## API changes
+{{#if apiDiff.differenceCount }}
+
+<h2 id="api-changes">API changes</h2>
 
 {{#*inline "api-diff"}}
 {{action}} {{#each sourceSpecEntityDetails}}{{location}}{{/each}}
@@ -109,38 +97,38 @@
 {{/each}}
 {{/if}}
 
-## Changed AppMaps
+{{/if}}
+
+
+{{#if changedAppMaps.length }}
+
+<h2 id="changed-appmaps">Changed AppMaps</h2>
+
 {{#each changedAppMaps}}
-<details>
 
-<summary>
-  {{appmap}}
-</summary>
+### {{appmap}}
 
-<table>
-  <tbody>
-    <tr>
-      <td>Source diff</td>
-      <td>
+{{#unless sourceDiff}}
+No relevant changes to source code were detected for this AppMap.
+{{/unless}}
+{{#if sourceDiff}}
+```diff
+{{sourceDiff}}
+```
+{{/if}}
 
-        ```diff
-        {{sourceDiff}}
-        ```
+| Diagram | Link |
+| --- | --- |
+| Sequence diagram diff | [{{sequenceDiagramDiff}}](./{{sequenceDiagramDiff}}) |
+| Base AppMap | [base/{{appmap}}](./base/{{appmap}}.appmap.json) |
+| Head AppMap | [head/{{appmap}}](./head/{{appmap}}.appmap.json) |
 
-      </td>
-    </tr>
-    <tr>
-      <td>Sequence diagram diff</td>
-      <td>
-        <a href="./{{sequenceDiagramDiff}}">{{sequenceDiagramDiff}}</a>
-    </tr>
-  </tbody>
-</table>
-
-</details>
 {{/each}}
 
-## Changed code behavior
+{{/if}}
+
+{{#if sequenceDiagramDiffSnippetCount }}
+<h2 id="changed-code-behavior">Changed code behavior</h2>
 
 {{#each sequenceDiagramDiffSnippets}}
 
@@ -157,3 +145,4 @@
 </details>
 
 {{/each}}
+{{/if}}
