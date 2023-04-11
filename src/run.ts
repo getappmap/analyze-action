@@ -8,6 +8,7 @@ import ArtifactStore from './ArtifactStore';
 import {CommandOptions} from './CommandOptions';
 import {existsSync} from 'fs';
 import MarkdownReport from './report/MarkdownReport';
+import {ChangeReport} from './report/ChangeReport';
 
 export default async function run(
   artifactStore: ArtifactStore,
@@ -41,12 +42,15 @@ export default async function run(
   if (options.sourceDir) comparer.sourceDir = options.sourceDir;
   await comparer.compare();
 
-  const summary = await summarizeChanges(outputDir);
+  const summary = await summarizeChanges(options.baseDir || process.cwd(), outputDir);
   return {summary};
 }
 
-export async function summarizeChanges(outputDir: string): Promise<string> {
-  const changeReport = await readFile(join(outputDir, 'change-report.json'), 'utf-8');
+export async function summarizeChanges(baseDir: string, outputDir: string): Promise<string> {
+  const changeReport = JSON.parse(
+    await readFile(join(outputDir, 'change-report.json'), 'utf-8')
+  ) as ChangeReport;
+
   const reporter = new MarkdownReport();
-  return await reporter.generateReport(JSON.parse(changeReport));
+  return await reporter.generateReport(changeReport, baseDir);
 }

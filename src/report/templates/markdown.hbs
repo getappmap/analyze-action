@@ -22,9 +22,38 @@
 {{testLocation}}
 </summary>
 
-[{{testLocation}}]({{testLocation}}) 
+<table>
+  <tbody>
+    <tr>
+      <td>Test case file</td> 
+      <td><a href="{{testPath}}">{{testLocation}}</a></td>
+    </tr>
+    {{#if changedAppMap}}
+    {{#with changedAppMap}}
+    <tr>
+      <td>Sequence diagram diff</td>
+      <td>
+        <a href="./{{sequenceDiagramDiff}}">{{sequenceDiagramDiff}}</a>
+      </td>
+    </tr>
+    <tr>
+      <td>Source diff</td>
+      <td>
 
-[{{appmap}}](./head/{{appmap}}.appmap.json)
+        ```diff
+        {{sourceDiff}}
+        ```
+
+      </td>
+    </tr>
+    {{/with}}
+    {{/if}}
+    <tr>
+      <td>AppMap</td>
+      <td><a href="./head/{{appmap}}.appmap.json">{{appmap}}</a></td>
+    </tr>
+  </tbody>
+</table>
 
 </details>
 
@@ -68,16 +97,27 @@
   {{appmap}}
 </summary>
 
-_Source diff_
-```
-{{{sourceDiff}}}
-```
+<table>
+  <tbody>
+    <tr>
+      <td>Source diff</td>
+      <td>
 
-_Sequence diagram diff_
+        ```diff
+        {{sourceDiff}}
+        ```
 
-[{{sequenceDiagramDiff}}](./{{sequenceDiagramDiff}})
+      </td>
+    </tr>
+    <tr>
+      <td>Sequence diagram diff</td>
+      <td>
+        <a href="./{{sequenceDiagramDiff}}">{{sequenceDiagramDiff}}</a>
+    </tr>
+  </tbody>
+</table>
+
 </details>
-
 {{/each}}
 
 ## Changed code behavior

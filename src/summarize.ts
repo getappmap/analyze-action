@@ -8,6 +8,7 @@ async function main() {
   });
   parser.add_argument('-v', '--verbose');
   parser.add_argument('-d', '--directory', {help: 'Program working directory'});
+  parser.add_argument('--base-dir', {help: 'Base directory of the project'});
   parser.add_argument('--report-dir', {required: true});
 
   const options = parser.parse_args();
@@ -16,8 +17,9 @@ async function main() {
   const directory = options.directory;
   if (directory) process.chdir(directory);
   const reportDir = options.report_dir;
+  const baseDir = options.base_dir || process.cwd();
 
-  const summary = await summarizeChanges(reportDir);
+  const summary = await summarizeChanges(baseDir, reportDir);
   console.log(summary);
 }
 
