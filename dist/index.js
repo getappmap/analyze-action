@@ -498,9 +498,11 @@ function runInGitHub() {
         const githubRepo = process.env.GITHUB_REPOSITORY;
         (0, assert_1.default)(baseRef, 'baseRef is undefined');
         (0, assert_1.default)(headRef, 'headRef is undefined');
+        const basePath = [process.env.GITHUB_SERVER_URL, githubRepo, 'tree', baseRef].join('/');
         const { summary } = yield (0, run_1.default)(new GitHubArtifactStore_1.GitHubArtifactStore(), {
             baseRef,
             headRef,
+            basePath,
             sourceDir,
             githubRepo,
             githubToken,
@@ -640,10 +642,46 @@ const fs_1 = __nccwpck_require__(7147);
 const handlebars_1 = __importDefault(__nccwpck_require__(7492));
 const path_1 = __nccwpck_require__(1017);
 const Template = handlebars_1.default.compile((0, fs_1.readFileSync)((0, path_1.join)(__dirname, 'templates', 'markdown.hbs'), 'utf8'));
+function isURL(path) {
+    try {
+        new URL(path);
+        return true;
+    }
+    catch (e) {
+        return false;
+    }
+}
 class MarkdownReport {
-    generateReport(changeReport) {
+    generateReport(changeReport, basePath) {
         return __awaiter(this, void 0, void 0, function* () {
+            // Remove the empty sequence diagram diff snippet - which can't be reasonably rendered.
             delete changeReport.sequenceDiagramDiffSnippets[''];
+            // Resolve changedAppMap entry for a test failure. Note that this will not help much
+            // with new test cases that fail, but it will help with modified tests that fail.
+            changeReport.testFailures.forEach(failure => {
+                const changedAppMap = changeReport.changedAppMaps.find(change => change.appmap === failure.appmap);
+                if (changedAppMap) {
+                    failure.changedAppMap = changedAppMap;
+                }
+            });
+            // Resolve the test location to a source path relative to baseDir.
+            changeReport.testFailures
+                .filter(failure => failure.testLocation)
+                .forEach(failure => {
+                const tokens = failure.testLocation.split(':');
+                tokens.pop();
+                let testPath = tokens.join(':');
+                let path;
+                console.log(testPath, basePath);
+                if (isURL(basePath)) {
+                    path = new URL(testPath, basePath).toString();
+                }
+                else {
+                    path = (0, path_1.join)(basePath, testPath);
+                }
+                failure.testPath = path;
+            });
+            // Provide a simple count of the number of differences - since Handlebars can't do math.
             changeReport.apiDiff.differenceCount =
                 changeReport.apiDiff.breakingDifferences.length +
                     changeReport.apiDiff.nonBreakingDifferences.length +
@@ -714,16 +752,16 @@ function run(artifactStore, options) {
         if (options.sourceDir)
             comparer.sourceDir = options.sourceDir;
         yield comparer.compare();
-        const summary = yield summarizeChanges(outputDir);
+        const summary = yield summarizeChanges(options.basePath || process.cwd(), outputDir);
         return { summary };
     });
 }
 exports["default"] = run;
-function summarizeChanges(outputDir) {
+function summarizeChanges(basePath, outputDir) {
     return __awaiter(this, void 0, void 0, function* () {
-        const changeReport = yield (0, promises_1.readFile)((0, path_1.join)(outputDir, 'change-report.json'), 'utf-8');
+        const changeReport = JSON.parse(yield (0, promises_1.readFile)((0, path_1.join)(outputDir, 'change-report.json'), 'utf-8'));
         const reporter = new MarkdownReport_1.default();
-        return yield reporter.generateReport(JSON.parse(changeReport));
+        return yield reporter.generateReport(changeReport, basePath);
     });
 }
 exports.summarizeChanges = summarizeChanges;
