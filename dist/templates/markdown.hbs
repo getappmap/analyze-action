@@ -1,0 +1,139 @@
+# AppMap
+
+| Summary | Status |
+| --- | --- |
+| [Test failures](#test-failures) | :warning: {{testFailures.length}} failed |
+| [API changes](#api-changes) | 
+  {{~#if apiDiff.breakingDifferencesFound }}:warning:{{/if~}}
+  {{~#unless apiDiff.breakingDifferencesFound }}:wrench:{{/unless~}}
+  &nbsp;{{apiDiff.differenceCount}}
+  {{~#if apiDiff.breakingDifferencesFound }} breaking {{/if~}}
+  {{~#unless apiDiff.breakingDifferencesFound }} compatible {{/unless~}}
+  changes |
+| [Changed AppMaps](#changed-appmaps) | :wrench: {{changedAppMaps.length}} changes |
+| [Changed Code Behavior](#changed-code-behavior) | :wrench: {{sequenceDiagramDiffSnippetCount}} changes |
+
+## Test failures
+
+{{#each testFailures}}
+
+<details>
+<summary>
+{{testLocation}}
+</summary>
+
+<table>
+  <tbody>
+    <tr>
+      <td>Test case file</td> 
+      <td><a href="{{testPath}}">{{testLocation}}</a></td>
+    </tr>
+    {{#if changedAppMap}}
+    {{#with changedAppMap}}
+    <tr>
+      <td>Sequence diagram diff</td>
+      <td>
+        <a href="./{{sequenceDiagramDiff}}">{{sequenceDiagramDiff}}</a>
+      </td>
+    </tr>
+    <tr>
+      <td>Source diff</td>
+      <td>
+
+        ```diff
+        {{sourceDiff}}
+        ```
+
+      </td>
+    </tr>
+    {{/with}}
+    {{/if}}
+    <tr>
+      <td>AppMap</td>
+      <td><a href="./head/{{appmap}}.appmap.json">{{appmap}}</a></td>
+    </tr>
+  </tbody>
+</table>
+
+</details>
+
+{{/each}}
+
+## API changes
+
+{{#*inline "api-diff"}}
+{{action}} {{#each sourceSpecEntityDetails}}{{location}}{{/each}}
+{{/inline}}
+
+{{#if apiDiff.breakingDifferences}}
+### Breaking changes
+
+{{#each apiDiff.breakingDifferences}}
+  - {{> api-diff }}
+{{/each}}
+{{/if}}
+
+{{#if apiDiff.nonBreakingDifferences}}
+### Non-breaking changes
+
+{{#each apiDiff.nonBreakingDifferences}}
+  - {{> api-diff }}
+{{/each}}
+{{/if}}
+
+{{#if apiDiff.unclassifiedDifferences}}
+### Unclassified changes
+
+{{#each apiDiff.unclassifiedDifferences}}
+  - {{> api-diff }}
+{{/each}}
+{{/if}}
+
+## Changed AppMaps
+{{#each changedAppMaps}}
+<details>
+
+<summary>
+  {{appmap}}
+</summary>
+
+<table>
+  <tbody>
+    <tr>
+      <td>Source diff</td>
+      <td>
+
+        ```diff
+        {{sourceDiff}}
+        ```
+
+      </td>
+    </tr>
+    <tr>
+      <td>Sequence diagram diff</td>
+      <td>
+        <a href="./{{sequenceDiagramDiff}}">{{sequenceDiagramDiff}}</a>
+    </tr>
+  </tbody>
+</table>
+
+</details>
+{{/each}}
+
+## Changed code behavior
+
+{{#each sequenceDiagramDiffSnippets}}
+
+```
+{{{@key}}}
+```
+
+<details>
+<summary>{{ this.length }} occurrances</summary>
+
+{{#each this}}
+- [{{.}}](./diff/{{.}}.diff.sequence.json)
+{{/each}}
+</details>
+
+{{/each}}

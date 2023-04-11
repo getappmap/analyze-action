@@ -5,12 +5,14 @@
   "license": "MIT",
   "main": "build/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && yarn copy:assets:build",
     "test": "jest",
     "appmap": "appmap-agent-js -- jest --no-cache",
     "clean": "rm -rf build dist tmp",
     "format": "prettier --write '**/*.ts'",
-    "package": "ncc build --source-map --license licenses.txt"
+    "package": "ncc build --source-map --license licenses.txt && yarn copy:assets:package",
+    "copy:assets:build": "cp -r src/report/templates build/report/",
+    "copy:assets:package": "cp -r src/report/templates dist/"
   },
   "devDependencies": {
     "@appland/appmap-agent-js": "^13.6.0",
@@ -35,5 +37,8 @@
     "@actions/github": "^5.1.1",
     "argparse": "^2.0.1",
     "handlebars": "^4.7.7"
+  },
+  "engines": {
+    "node": ">=16.0.0"
   }
 }
