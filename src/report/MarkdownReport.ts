@@ -52,11 +52,11 @@ export default class MarkdownReport implements Report {
 
     // Provide a simple count of the number of differences - since Handlebars can't do math.
     changeReport.apiDiff.differenceCount =
-      changeReport.apiDiff.breakingDifferences.length +
-      changeReport.apiDiff.nonBreakingDifferences.length +
-      changeReport.apiDiff.unclassifiedDifferences.length;
+      changeReport.apiDiff?.breakingDifferences?.length +
+        changeReport.apiDiff?.nonBreakingDifferences?.length +
+        changeReport.apiDiff?.unclassifiedDifferences?.length || 0;
     (changeReport as any).sequenceDiagramDiffSnippetCount = Object.keys(
-      changeReport.sequenceDiagramDiffSnippets
+      changeReport.sequenceDiagramDiffSnippets || {}
     ).length;
 
     return Template(changeReport);

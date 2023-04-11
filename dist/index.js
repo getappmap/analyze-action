@@ -653,6 +653,7 @@ function isURL(path) {
 }
 class MarkdownReport {
     generateReport(changeReport, basePath) {
+        var _a, _b, _c, _d, _e, _f;
         return __awaiter(this, void 0, void 0, function* () {
             // Remove the empty sequence diagram diff snippet - which can't be reasonably rendered.
             delete changeReport.sequenceDiagramDiffSnippets[''];
@@ -683,10 +684,10 @@ class MarkdownReport {
             });
             // Provide a simple count of the number of differences - since Handlebars can't do math.
             changeReport.apiDiff.differenceCount =
-                changeReport.apiDiff.breakingDifferences.length +
-                    changeReport.apiDiff.nonBreakingDifferences.length +
-                    changeReport.apiDiff.unclassifiedDifferences.length;
-            changeReport.sequenceDiagramDiffSnippetCount = Object.keys(changeReport.sequenceDiagramDiffSnippets).length;
+                ((_b = (_a = changeReport.apiDiff) === null || _a === void 0 ? void 0 : _a.breakingDifferences) === null || _b === void 0 ? void 0 : _b.length) +
+                    ((_d = (_c = changeReport.apiDiff) === null || _c === void 0 ? void 0 : _c.nonBreakingDifferences) === null || _d === void 0 ? void 0 : _d.length) +
+                    ((_f = (_e = changeReport.apiDiff) === null || _e === void 0 ? void 0 : _e.unclassifiedDifferences) === null || _f === void 0 ? void 0 : _f.length) || 0;
+            changeReport.sequenceDiagramDiffSnippetCount = Object.keys(changeReport.sequenceDiagramDiffSnippets || {}).length;
             return Template(changeReport);
         });
     }
