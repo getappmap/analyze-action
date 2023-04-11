@@ -2,16 +2,36 @@
 
 | Summary | Status |
 | --- | --- |
-| [Test failures](#test-failures) | :warning: {{testFailures.length}} failed |
+| [Test failures](#test-failures) | {{#if testFailures.length}}:warning: {{testFailures.length}} failed{{/if}}{{#unless testFailures.length}}:white_check_mark: All tests passed{{/unless}} |
 | [API changes](#api-changes) | 
+  {{~#unless apiDiff.differenceCount }}
+  :white_check_mark: No API changes
+  {{~/unless}}
+  {{~#if apiDiff.differenceCount }}
   {{~#if apiDiff.breakingDifferencesFound }}:warning:{{/if~}}
   {{~#unless apiDiff.breakingDifferencesFound }}:wrench:{{/unless~}}
   &nbsp;{{apiDiff.differenceCount}}
   {{~#if apiDiff.breakingDifferencesFound }} breaking {{/if~}}
   {{~#unless apiDiff.breakingDifferencesFound }} compatible {{/unless~}}
-  changes |
-| [Changed AppMaps](#changed-appmaps) | :wrench: {{changedAppMaps.length}} changes |
-| [Changed Code Behavior](#changed-code-behavior) | :wrench: {{sequenceDiagramDiffSnippetCount}} changes |
+  changes
+  {{~/if}}
+  |
+| [Changed AppMaps](#changed-appmaps) | 
+  {{~#unless changedAppMaps.length }}
+  :white_check_mark: No changes
+  {{~/unless}}
+  {{~#if changedAppMaps.length }}
+  :wrench: {{changedAppMaps.length}} changes
+  {{~/if}}
+  |
+| [Changed Code Behavior](#changed-code-behavior) |
+  {{~#unless sequenceDiagramDiffSnippetCount }}
+  :white_check_mark: No changes
+  {{~/unless}}
+  {{~#if sequenceDiagramDiffSnippetCount }}
+  :wrench: {{sequenceDiagramDiffSnippetCount}} changes 
+  {{~/if}}
+  |
 
 ## Test failures
 
