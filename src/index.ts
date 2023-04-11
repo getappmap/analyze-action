@@ -75,7 +75,7 @@ async function runLocally() {
     githubToken: options.github_token,
     githubRepo: options.github_repo,
   });
-  console.log(summary);
+  console.log(summary.summary);
 }
 
 if (require.main === module) {

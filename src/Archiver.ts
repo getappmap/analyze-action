@@ -28,7 +28,7 @@ export default class Archiver {
       throw new Error(`No AppMap archives found in ${process.cwd()}`);
     }
     if (archiveFiles.length > 1) {
-      log(LogLevel.Warn, `Mulitple AppMap archives found in ${process.cwd()}`);
+      log(LogLevel.Warn, `Multiple AppMap archives found in ${process.cwd()}`);
     }
 
     const archiveFile = archiveFiles.pop()!;
@@ -48,8 +48,10 @@ export default class Archiver {
   }
 
   async unpack(archiveFile: string, directory: string) {
-    log(LogLevel.Info, `Unpacking AppMap archive ${archiveFile} into ${directory}`);
-    await mkdir(directory, {recursive: true});
-    await executeCommand(`tar -C ${directory} -xf ${archiveFile}`);
+    log(LogLevel.Info, `Restoring AppMap archive ${archiveFile} into ${directory}`);
+
+    let restoreCommand = `${this.appmapCommand} restore --exact --revision ${this.revision} --output-dir ${directory}`;
+    if (verbose()) restoreCommand += ' --verbose';
+    await executeCommand(restoreCommand);
   }
 }

@@ -43,7 +43,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const fs_1 = __nccwpck_require__(7147);
-const promises_1 = __nccwpck_require__(3292);
 const path_1 = __nccwpck_require__(1017);
 const executeCommand_1 = __nccwpck_require__(3285);
 const log_1 = __importStar(__nccwpck_require__(1285));
@@ -70,7 +69,7 @@ class Archiver {
                 throw new Error(`No AppMap archives found in ${process.cwd()}`);
             }
             if (archiveFiles.length > 1) {
-                (0, log_1.default)(log_1.LogLevel.Warn, `Mulitple AppMap archives found in ${process.cwd()}`);
+                (0, log_1.default)(log_1.LogLevel.Warn, `Multiple AppMap archives found in ${process.cwd()}`);
             }
             const archiveFile = archiveFiles.pop();
             (0, log_1.default)(log_1.LogLevel.Debug, `Processing AppMap archive ${archiveFile}`);
@@ -86,9 +85,11 @@ class Archiver {
     }
     unpack(archiveFile, directory) {
         return __awaiter(this, void 0, void 0, function* () {
-            (0, log_1.default)(log_1.LogLevel.Info, `Unpacking AppMap archive ${archiveFile} into ${directory}`);
-            yield (0, promises_1.mkdir)(directory, { recursive: true });
-            yield (0, executeCommand_1.executeCommand)(`tar -C ${directory} -xf ${archiveFile}`);
+            (0, log_1.default)(log_1.LogLevel.Info, `Restoring AppMap archive ${archiveFile} into ${directory}`);
+            let restoreCommand = `${this.appmapCommand} restore --exact --revision ${this.revision} --output-dir ${directory}`;
+            if ((0, verbose_1.default)())
+                restoreCommand += ' --verbose';
+            yield (0, executeCommand_1.executeCommand)(restoreCommand);
         });
     }
 }
@@ -541,7 +542,7 @@ function runLocally() {
             githubToken: options.github_token,
             githubRepo: options.github_repo,
         });
-        console.log(summary);
+        console.log(summary.summary);
     });
 }
 if (require.main === require.cache[eval('__filename')]) {
