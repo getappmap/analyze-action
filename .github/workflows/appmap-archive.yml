@@ -18,12 +18,10 @@ jobs:
       - name: Install dependencies
         run: yarn install
       - name: Install and configure AppMap
-        uses: getappmap/install-appmap-action@v1-pre.6
-        id: install-appmap
+        uses: getappmap/install-appmap-action@v1-pre.7
       - name: Build AppMaps
         run: yarn appmap
       - name: Archive AppMaps
         uses: getappmap/archive-appmap-action@v1-pre.10
-        id: archive-appmaps
         with:
           verbose: true

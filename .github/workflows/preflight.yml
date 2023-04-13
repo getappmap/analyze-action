@@ -20,7 +20,7 @@ jobs:
       - name: Install dependency libraries
         run: yarn install
       - name: Install and configure AppMap
-        uses: getappmap/install-appmap-action@v1-pre.6
+        uses: getappmap/install-appmap-action@v1-pre.7
       - name: Build
         run: yarn build
       - name: Make AppMaps

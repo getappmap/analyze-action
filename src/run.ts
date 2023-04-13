@@ -1,19 +1,19 @@
 import Compare from './Compare';
 import Restore from './Restore';
 import {executeCommand} from './executeCommand';
-import {mkdir, readFile, writeFile} from 'fs/promises';
+import {mkdir} from 'fs/promises';
 import {join} from 'path';
 import Archiver from './Archiver';
 import ArtifactStore from './ArtifactStore';
 import {CommandOptions} from './CommandOptions';
 import {existsSync} from 'fs';
-import MarkdownReport from './report/MarkdownReport';
-import {ChangeReport} from './report/ChangeReport';
+import MarkdownReport from './MarkdownReport';
+import assert from 'assert';
 
 export default async function run(
   artifactStore: ArtifactStore,
   options: CommandOptions
-): Promise<{summary: string; outputDir: string}> {
+): Promise<{outputDir: string; reportFile: string}> {
   const baseRevision = (await executeCommand(`git rev-parse ${options.baseRef}`)).trim();
   const headRevision = (await executeCommand(`git rev-parse ${options.headRef}`)).trim();
 
@@ -42,15 +42,14 @@ export default async function run(
   if (options.sourceDir) comparer.sourceDir = options.sourceDir;
   await comparer.compare();
 
-  const summary = await summarizeChanges(options.basePath || process.cwd(), outputDir);
-  return {summary, outputDir};
+  const reportFile = await summarizeChanges(outputDir);
+  return {outputDir, reportFile};
 }
 
-export async function summarizeChanges(basePath: string, outputDir: string): Promise<string> {
-  const changeReport = JSON.parse(
-    await readFile(join(outputDir, 'change-report.json'), 'utf-8')
-  ) as ChangeReport;
-
-  const reporter = new MarkdownReport();
-  return await reporter.generateReport(changeReport, basePath);
+export async function summarizeChanges(outputDir: string) {
+  const reporter = new MarkdownReport(outputDir);
+  const reportFile = join(outputDir, 'report.md');
+  await reporter.generateReport();
+  assert(existsSync(reportFile), `${reportFile} does not exist`);
+  return reportFile;
 }
