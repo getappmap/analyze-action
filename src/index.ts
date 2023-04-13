@@ -7,8 +7,7 @@ import assert from 'assert';
 import {DirectoryArtifactStore} from './DirectoryArtifactStore';
 import run from './run';
 import {GitHubArtifactStore} from './GitHubArtifactStore';
-import {writeFile} from 'fs/promises';
-import {join} from 'path';
+import {cp} from 'fs/promises';
 
 async function runInGitHub(): Promise<void> {
   verbose(core.getBooleanInput('verbose'));
@@ -31,18 +30,17 @@ async function runInGitHub(): Promise<void> {
   assert(baseRef, 'baseRef is undefined');
   assert(headRef, 'headRef is undefined');
 
-  const basePath = [process.env.GITHUB_SERVER_URL, githubRepo, 'tree', baseRef].join('/');
+  // const baseURL = [process.env.GITHUB_SERVER_URL, githubRepo, 'tree', baseRef].join('/');
 
-  const {summary} = await run(new GitHubArtifactStore(), {
+  const {reportFile} = await run(new GitHubArtifactStore(), {
     baseRef,
     headRef,
-    basePath,
     sourceDir,
     githubRepo,
     githubToken,
   });
   if (process.env.GITHUB_STEP_SUMMARY) {
-    await writeFile(process.env.GITHUB_STEP_SUMMARY, summary);
+    await cp(reportFile, process.env.GITHUB_STEP_SUMMARY);
   }
 }
 
@@ -68,16 +66,14 @@ async function runLocally() {
   const directory = options.directory;
   if (directory) process.chdir(directory);
 
-  const summary = await run(new DirectoryArtifactStore(artifactDir), {
+  await run(new DirectoryArtifactStore(artifactDir), {
     appmapCommand: options.appmap_command,
     baseRef: options.base_revision,
     headRef: options.head_revision,
     sourceDir: options.source_dir,
-    githubToken: options.github_token,
+    githubToken: options.github_token || process.env.GITHUB_TOKEN,
     githubRepo: options.github_repo,
   });
-
-  await writeFile(join(summary.outputDir, 'report.md'), summary.summary);
 }
 
 if (require.main === module) {

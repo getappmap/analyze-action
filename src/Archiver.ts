@@ -1,5 +1,4 @@
 import {existsSync} from 'fs';
-import {mkdir} from 'fs/promises';
 import {basename, dirname, join} from 'path';
 import ArtifactStore from './ArtifactStore';
 import {executeCommand} from './executeCommand';
@@ -13,6 +12,21 @@ export default class Archiver {
   constructor(public artifactStore: ArtifactStore, public revision: string) {}
 
   async archive(): Promise<{archiveFile: string}> {
+    {
+      const existingArchives = [
+        join('.appmap', 'archive', 'full', `${this.revision}.tar`),
+        join('.appmap', 'archive', 'incremental', `${this.revision}.tar`),
+      ]
+        .filter(file => existsSync(file))
+        // With alphabetical sort, 'full' archive will be preferred to 'incremental'
+        .sort((a, b) => a.localeCompare(b));
+      const existingArchive = existingArchives.shift();
+      if (existingArchive) {
+        log(LogLevel.Info, `Using existing AppMap archive ${existingArchive}`);
+        return {archiveFile: existingArchive};
+      }
+    }
+
     log(LogLevel.Info, `Archiving AppMaps from ${process.cwd()}`);
 
     let archiveCommand = `${this.appmapCommand} archive --revision ${this.revision}`;
