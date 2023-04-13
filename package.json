@@ -14,7 +14,7 @@
     "package": "ncc build --source-map --license licenses.txt"
   },
   "devDependencies": {
-    "@appland/appmap-agent-js": "^13.6.0",
+    "@appland/appmap-agent-js": "^13.7.0",
     "@appland/models": "^2.4.2",
     "@appland/scanner": "^1.76.8",
     "@types/argparse": "^2.0.10",
