@@ -471,8 +471,10 @@ function executeCommand(cmd, printCommand = (0, verbose_1.default)(), printStdou
         });
     }
     return new Promise((resolve, reject) => {
-        command.addListener('exit', code => {
-            if (code === 0) {
+        command.addListener('exit', (code, signal) => {
+            if (signal || code === 0) {
+                if (signal)
+                    (0, log_1.default)(log_1.LogLevel.Info, `Command killed by signal ${signal}`);
                 resolve(result.join(''));
             }
             else {
