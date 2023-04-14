@@ -21,6 +21,14 @@ jobs:
         run: yarn install
       - name: Install and configure AppMap
         uses: getappmap/install-appmap-action@v1-pre.7
+          with:
+            github-token: ${{ secrets.GITHUB_TOKEN }}
+            verbose: true
+      - name: Commit AppMap configuration changes
+        uses: EndBug/add-and-commit@v7
+        with:
+          add: .
+          message: 'chore: Update AppMap installation'
       - name: Build
         run: yarn build
       - name: Make AppMaps

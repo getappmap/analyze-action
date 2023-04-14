@@ -19,6 +19,9 @@ jobs:
         run: yarn install
       - name: Install and configure AppMap
         uses: getappmap/install-appmap-action@v1-pre.7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          verbose: true
       - name: Build AppMaps
         run: yarn appmap
       - name: Archive AppMaps
