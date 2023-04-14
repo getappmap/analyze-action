@@ -24,6 +24,11 @@ jobs:
           with:
             github-token: ${{ secrets.GITHUB_TOKEN }}
             verbose: true
+      - name: Commit AppMap configuration changes
+        uses: EndBug/add-and-commit@v7
+        with:
+          add: .
+          message: 'chore: Update AppMap installation'
       - name: Build
         run: yarn build
       - name: Make AppMaps
