@@ -1,0 +1,14 @@
+name: Verify that all test cases have passed.
+description: |
+  This action verifies that all test cases have passed. If any test cases have failed, the action
+  will fail. It checks the test case succeeded / failed status by examining the JSON report
+  file created by the `preflight` action.
+inputs:
+  directory:
+    description: |
+      Directory containing the JSON report file. This is most easily obtained as the
+      `report-dir` output of the preflight action.
+    required: true
+runs:
+  using: 'node16'
+  main: '../dist/check/index.js'

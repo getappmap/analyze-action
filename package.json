@@ -5,18 +5,17 @@
   "license": "MIT",
   "main": "build/index.js",
   "scripts": {
-    "build": "tsc",
+    "compile": "tsc",
     "watch": "tsc --watch",
-    "test": "jest",
-    "appmap": "appmap-agent-js -- jest --no-cache",
+    "package": "ncc build -o dist/preflight --source-map src/preflight.ts && ncc build -o dist/check --source-map src/check.ts",
+    "build": "yarn compile && yarn package",
+    "test": "jest --runInBand",
+    "appmap": "appmap-agent-js -- jest --runInBand --no-cache",
     "clean": "rm -rf build dist tmp",
-    "format": "prettier --write '**/*.ts'",
-    "package": "ncc build --source-map --license licenses.txt"
+    "format": "prettier --write '**/*.ts'"
   },
   "devDependencies": {
     "@appland/appmap-agent-js": "^13.7.0",
-    "@appland/models": "^2.4.2",
-    "@appland/scanner": "^1.76.8",
     "@types/argparse": "^2.0.10",
     "@types/glob": "^8.1.0",
     "@types/jest": "^29.5.0",
