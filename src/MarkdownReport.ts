@@ -3,7 +3,7 @@ import {executeCommand} from './executeCommand';
 import verbose from './verbose';
 
 export default class MarkdownReport {
-  public appmapCommand = '/tmp/appmap';
+  public appmapCommand = 'appmap';
 
   constructor(public reportDir: string, public options: ReportOptions) {
     if (options.appmapCommand) this.appmapCommand = options.appmapCommand;

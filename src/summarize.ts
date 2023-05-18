@@ -9,7 +9,7 @@ async function main() {
   });
   parser.add_argument('-v', '--verbose', {type: Boolean});
   parser.add_argument('-d', '--directory', {help: 'Program working directory'});
-  parser.add_argument('--appmap-command', {default: '/tmp/appmap'});
+  parser.add_argument('--appmap-command', {default: 'appmap'});
   parser.add_argument('--report-dir', {required: true});
   parser.add_argument('--source-url');
   parser.add_argument('--appmap-url');

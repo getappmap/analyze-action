@@ -80,7 +80,7 @@ async function runLocally() {
   });
   parser.add_argument('-v', '--verbose');
   parser.add_argument('-d', '--directory', {help: 'Program working directory'});
-  parser.add_argument('--appmap-command', {default: '/tmp/appmap'});
+  parser.add_argument('--appmap-command', {default: 'appmap'});
   parser.add_argument('--base-revision', {required: true});
   parser.add_argument('--head-revision', {required: true});
   parser.add_argument('--source-dir');

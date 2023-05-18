@@ -13792,7 +13792,7 @@ class Archiver {
     constructor(artifactStore, revision) {
         this.artifactStore = artifactStore;
         this.revision = revision;
-        this.appmapCommand = '/tmp/appmap';
+        this.appmapCommand = 'appmap';
         this.archiveBranch = 'appmap-archive';
     }
     archive() {
@@ -13906,7 +13906,7 @@ class Compare {
         this.artifactStore = artifactStore;
         this.baseRevision = baseRevision;
         this.headRevision = headRevision;
-        this.appmapCommand = '/tmp/appmap';
+        this.appmapCommand = 'appmap';
     }
     compare() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -14081,7 +14081,7 @@ class MarkdownReport {
     constructor(reportDir, options) {
         this.reportDir = reportDir;
         this.options = options;
-        this.appmapCommand = '/tmp/appmap';
+        this.appmapCommand = 'appmap';
         if (options.appmapCommand)
             this.appmapCommand = options.appmapCommand;
     }
@@ -14091,9 +14091,9 @@ class MarkdownReport {
             if ((0, verbose_1.default)())
                 cmd += ' --verbose';
             if (this.options.sourceURL)
-                cmd += ` --source-url ${this.options.sourceURL}`;
+                cmd += ` --source-url '${this.options.sourceURL}'`;
             if (this.options.appmapURL)
-                cmd += ` --appmap-url ${this.options.appmapURL}`;
+                cmd += ` --appmap-url '${this.options.appmapURL}'`;
             cmd += ` ${this.reportDir}`;
             yield (0, executeCommand_1.executeCommand)(cmd);
         });
@@ -14128,7 +14128,7 @@ class Restore {
     constructor(revision, outputDir) {
         this.revision = revision;
         this.outputDir = outputDir;
-        this.appmapCommand = '/tmp/appmap';
+        this.appmapCommand = 'appmap';
     }
     restore() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -14417,7 +14417,7 @@ function runLocally() {
         });
         parser.add_argument('-v', '--verbose');
         parser.add_argument('-d', '--directory', { help: 'Program working directory' });
-        parser.add_argument('--appmap-command', { default: '/tmp/appmap' });
+        parser.add_argument('--appmap-command', { default: 'appmap' });
         parser.add_argument('--base-revision', { required: true });
         parser.add_argument('--head-revision', { required: true });
         parser.add_argument('--source-dir');
