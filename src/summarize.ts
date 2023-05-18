@@ -16,7 +16,6 @@ async function main() {
   const directory = options.directory;
   if (directory) process.chdir(directory);
   const reportDir = options.report_dir;
-  const baseDir = options.base_dir || process.cwd();
 
   await summarizeChanges(reportDir);
 }

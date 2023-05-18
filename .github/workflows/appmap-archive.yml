@@ -9,21 +9,25 @@ env:
   APPMAP_TELEMETRY_DISABLED: 'true'
 
 jobs:
-  appmap_archive_main:
+  appmap_archive:
     runs-on: ubuntu-latest
     if: github.event.pull_request.merged == true
     steps:
       - name: Checkout step
         uses: actions/checkout@v3
+
       - name: Install dependencies
         run: yarn install
-      - name: Install and configure AppMap
-        uses: getappmap/install-appmap-action@v1-pre.7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          verbose: true
+
+      - name: Install AppMap tools
+        run: |
+          curl -o /usr/local/bin/appmap -L https://github.com/getappmap/appmap-js/releases/download/%40appland%2Fappmap-preflight-v1.0-pre.19/appmap-preflight-linux-x64
+          chmod a+x /usr/local/bin/appmap
+          ln -s /usr/local/bin/appmap /tmp/appmap
+
       - name: Build AppMaps
         run: yarn appmap
+
       - name: Archive AppMaps
         uses: getappmap/archive-appmap-action@v1-pre.10
         with:

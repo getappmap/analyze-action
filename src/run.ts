@@ -13,7 +13,7 @@ import assert from 'assert';
 export default async function run(
   artifactStore: ArtifactStore,
   options: CommandOptions
-): Promise<{outputDir: string; reportFile: string}> {
+): Promise<{reportDir: string; reportFile: string}> {
   const baseRevision = (await executeCommand(`git rev-parse ${options.baseRef}`)).trim();
   const headRevision = (await executeCommand(`git rev-parse ${options.headRef}`)).trim();
 
@@ -40,10 +40,11 @@ export default async function run(
   comparer.outputDir = outputDir;
   if (options.appmapCommand) comparer.appmapCommand = options.appmapCommand;
   if (options.sourceDir) comparer.sourceDir = options.sourceDir;
-  await comparer.compare();
+  const { reportDir } = await comparer.compare();
 
+  
   const reportFile = await summarizeChanges(outputDir);
-  return {outputDir, reportFile};
+  return {reportDir, reportFile};
 }
 
 export async function summarizeChanges(outputDir: string) {

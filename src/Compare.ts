@@ -1,4 +1,3 @@
-import {glob} from 'glob';
 import {join} from 'path';
 import ArtifactStore from './ArtifactStore';
 import {executeCommand} from './executeCommand';
@@ -16,25 +15,25 @@ export default class Compare {
     public headRevision: string
   ) {}
 
-  async compare() {
-    const outputDir =
+  async compare(): Promise<{reportDir: string}> {
+    const reportDir =
       this.outputDir || `.appmap/change-report/${this.baseRevision}-${this.headRevision}`;
 
     log(
       LogLevel.Info,
       `Comparing base revision ${this.baseRevision} with head revision ${this.headRevision}`
     );
-    log(LogLevel.Debug, `Report output directory is ${outputDir}`);
+    log(LogLevel.Debug, `Report output directory is ${reportDir}`);
 
     let cmd = `${this.appmapCommand} compare --base-revision ${this.baseRevision} --head-revision ${this.headRevision} --clobber-output-dir=true`;
     if (verbose()) cmd += ' --verbose';
-    if (this.outputDir) cmd += ` --output-dir ${outputDir}`;
+    if (this.outputDir) cmd += ` --output-dir ${reportDir}`;
     if (this.sourceDir) cmd += ` --source-dir ${this.sourceDir}`;
     await executeCommand(cmd);
 
     const reportFile = `appmap-preflight-${this.baseRevision}-${this.headRevision}.tar.gz`;
     const dir = process.cwd();
-    process.chdir(outputDir);
+    process.chdir(reportDir);
     try {
       await executeCommand(`tar -czf ${reportFile} *`);
     } finally {
@@ -42,6 +41,8 @@ export default class Compare {
     }
 
     log(LogLevel.Info, `Storing comparison report ${reportFile}`);
-    await this.artifactStore.uploadArtifact(reportFile, [join(outputDir, reportFile)]);
+    await this.artifactStore.uploadArtifact(reportFile, [join(reportDir, reportFile)]);
+
+    return { reportDir };
   }
 }

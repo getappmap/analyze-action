@@ -30,15 +30,14 @@ async function runInGitHub(): Promise<void> {
   assert(baseRef, 'baseRef is undefined');
   assert(headRef, 'headRef is undefined');
 
-  // const baseURL = [process.env.GITHUB_SERVER_URL, githubRepo, 'tree', baseRef].join('/');
-
-  const {reportFile} = await run(new GitHubArtifactStore(), {
+  const {reportDir, reportFile} = await run(new GitHubArtifactStore(), {
     baseRef,
     headRef,
     sourceDir,
     githubRepo,
     githubToken,
   });
+  core.setOutput('report-dir', reportDir);
   if (process.env.GITHUB_STEP_SUMMARY) {
     await cp(reportFile, process.env.GITHUB_STEP_SUMMARY);
   }
