@@ -15,6 +15,7 @@ inputs:
       Most commonly, you'll use `secrets.GITHUB_TOKEN`, which is automatically provided by GitHub.
   verbose:
     description: Enable verbose logging.
+    default: 'false'
 outputs:
   report-dir:
     description: Directory containing the report files.
