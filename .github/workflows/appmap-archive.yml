@@ -26,7 +26,7 @@ jobs:
           ln -s /usr/local/bin/appmap /tmp/appmap
 
       - name: Build AppMaps
-        run: yarn appmap
+        run: yarn test
 
       - name: Archive AppMaps
         uses: getappmap/archive-appmap-action@v1-pre.10
