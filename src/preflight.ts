@@ -1,13 +1,15 @@
 import * as core from '@actions/core';
 import {ArgumentParser} from 'argparse';
 
-import {ActionLogger, setLogger} from './log';
+import log, {ActionLogger, LogLevel, setLogger} from './log';
 import verbose from './verbose';
 import assert from 'assert';
 import {DirectoryArtifactStore} from './DirectoryArtifactStore';
-import run from './run';
+import compare, {summarizeChanges} from './run';
 import {GitHubArtifactStore} from './GitHubArtifactStore';
 import {cp} from 'fs/promises';
+import {inspect} from 'util';
+import ReportOptions from './ReportOptions';
 
 async function runInGitHub(): Promise<void> {
   verbose(core.getBooleanInput('verbose'));
@@ -17,29 +19,58 @@ async function runInGitHub(): Promise<void> {
   const headRevisionArg = core.getInput('head-revision');
   const sourceDir = core.getInput('source-dir');
 
-  const baseRef = baseRevisionArg || process.env.GITHUB_BASE_REF;
-  if (!baseRef)
+  const baseRevision = baseRevisionArg || process.env.GITHUB_BASE_REF;
+  if (!baseRevision)
     throw new Error(
       'base-revision argument must be provided, or GITHUB_BASE_REF must be available from GitHub (https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables).'
     );
 
-  const headRef = headRevisionArg || process.env.GITHUB_SHA;
+  const headRevision = headRevisionArg || process.env.GITHUB_SHA;
   const githubToken = core.getInput('github-token');
   const githubRepo = process.env.GITHUB_REPOSITORY;
+  const githubServer = process.env.GITHUB_SERVER_URL;
+  const runId = process.env.GITHUB_RUN_ID;
 
-  assert(baseRef, 'baseRef is undefined');
-  assert(headRef, 'headRef is undefined');
+  assert(baseRevision, 'baseRef is undefined');
+  assert(headRevision, 'headRef is undefined');
+  assert(githubRepo, 'githubRepo is undefined');
+  assert(githubServer, 'githubServer is undefined');
+  assert(runId, 'githubRepo is undefined');
 
-  const {reportDir, reportFile} = await run(new GitHubArtifactStore(), {
-    baseRef,
-    headRef,
+  const compareOptions = {
+    baseRevision,
+    headRevision,
     sourceDir,
     githubRepo,
     githubToken,
+  };
+  log(LogLevel.Debug, `compareOptions: ${inspect(compareOptions)}`);
+
+  const [owner, repo] = githubRepo.split('/');
+  const sourceURL = new URL(githubServer);
+  sourceURL.pathname = [githubRepo, 'blob', headRevision].join('/');
+  const appmapURLParams = new URLSearchParams({
+    owner,
+    repo,
+    run_id: runId,
+    base_revision: baseRevision,
+    head_revision: headRevision,
   });
-  core.setOutput('report-dir', reportDir);
+  const appmapURL = new URL(`https://app.land/github_artifact?${appmapURLParams.toString()}`);
+
+  const reportOptions = {
+    sourceURL,
+    appmapURL,
+  };
+
+  log(LogLevel.Debug, `reportOptions: ${inspect(reportOptions)}`);
+
+  const compareResult = await compare(new GitHubArtifactStore(), compareOptions);
+  const reportResult = await summarizeChanges(compareResult.reportDir, reportOptions);
+
+  core.setOutput('report-dir', compareResult.reportDir);
   if (process.env.GITHUB_STEP_SUMMARY) {
-    await cp(reportFile, process.env.GITHUB_STEP_SUMMARY);
+    await cp(reportResult.reportFile, process.env.GITHUB_STEP_SUMMARY);
   }
 }
 
@@ -56,6 +87,8 @@ async function runLocally() {
   parser.add_argument('--github-token');
   parser.add_argument('--github-repo');
   parser.add_argument('--artifact-dir', {default: '.appmap/artifacts'});
+  parser.add_argument('--source-url');
+  parser.add_argument('--appmap-url');
 
   const options = parser.parse_args();
 
@@ -65,14 +98,22 @@ async function runLocally() {
   const directory = options.directory;
   if (directory) process.chdir(directory);
 
-  await run(new DirectoryArtifactStore(artifactDir), {
+  const compareOptions = {
     appmapCommand: options.appmap_command,
-    baseRef: options.base_revision,
-    headRef: options.head_revision,
+    baseRevision: options.base_revision,
+    headRevision: options.head_revision,
     sourceDir: options.source_dir,
     githubToken: options.github_token || process.env.GITHUB_TOKEN,
     githubRepo: options.github_repo,
-  });
+  };
+
+  const reportOptions = {} as ReportOptions;
+  if (options.appmap_command) reportOptions.appmapCommand = options.appmap_command;
+  if (options.source_url) reportOptions.sourceURL = new URL(options.source_url);
+  if (options.appmap_url) reportOptions.appmapURL = new URL(options.appmap_url);
+
+  const compareResult = await compare(new DirectoryArtifactStore(artifactDir), compareOptions);
+  await summarizeChanges(compareResult.reportDir, reportOptions);
 }
 
 if (require.main === module) {

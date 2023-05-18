@@ -5,17 +5,18 @@ import {mkdir} from 'fs/promises';
 import {join} from 'path';
 import Archiver from './Archiver';
 import ArtifactStore from './ArtifactStore';
-import {CommandOptions} from './CommandOptions';
+import CompareOptions from './CompareOptions';
 import {existsSync} from 'fs';
 import MarkdownReport from './MarkdownReport';
 import assert from 'assert';
+import ReportOptions from './ReportOptions';
 
-export default async function run(
+export default async function compare(
   artifactStore: ArtifactStore,
-  options: CommandOptions
-): Promise<{reportDir: string; reportFile: string}> {
-  const baseRevision = (await executeCommand(`git rev-parse ${options.baseRef}`)).trim();
-  const headRevision = (await executeCommand(`git rev-parse ${options.headRef}`)).trim();
+  options: CompareOptions
+): Promise<{reportDir: string}> {
+  const baseRevision = (await executeCommand(`git rev-parse ${options.baseRevision}`)).trim();
+  const headRevision = (await executeCommand(`git rev-parse ${options.headRevision}`)).trim();
 
   const outputDir = `.appmap/change-report/${baseRevision}-${headRevision}`;
   if (existsSync(outputDir))
@@ -40,17 +41,17 @@ export default async function run(
   comparer.outputDir = outputDir;
   if (options.appmapCommand) comparer.appmapCommand = options.appmapCommand;
   if (options.sourceDir) comparer.sourceDir = options.sourceDir;
-  const { reportDir } = await comparer.compare();
 
-  
-  const reportFile = await summarizeChanges(outputDir);
-  return {reportDir, reportFile};
+  return await comparer.compare();
 }
 
-export async function summarizeChanges(outputDir: string) {
-  const reporter = new MarkdownReport(outputDir);
+export async function summarizeChanges(
+  outputDir: string,
+  options: ReportOptions
+): Promise<{reportFile: string}> {
+  const reporter = new MarkdownReport(outputDir, options);
   const reportFile = join(outputDir, 'report.md');
   await reporter.generateReport();
   assert(existsSync(reportFile), `${reportFile} does not exist`);
-  return reportFile;
+  return {reportFile};
 }

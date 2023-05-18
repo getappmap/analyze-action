@@ -7016,7 +7016,7 @@ function runInGitHub() {
             return;
         }
         if (process.env.GITHUB_STEP_SUMMARY) {
-            yield (0, promises_1.writeFile)(summary.join('\n'), process.env.GITHUB_STEP_SUMMARY);
+            yield (0, promises_1.writeFile)(process.env.GITHUB_STEP_SUMMARY, summary.join('\n'));
         }
         process.exit(1);
     });
