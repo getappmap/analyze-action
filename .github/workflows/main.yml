@@ -31,7 +31,7 @@ jobs:
         run: yarn build
 
       - name: Test
-        run: yarn appmap || true
+        run: yarn test
 
       - name: Preflight
         id: preflight
@@ -40,11 +40,6 @@ jobs:
           base-revision: origin/main
           head-revision: ${{ github.event.pull_request.head.sha }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Check test status
-        uses: ./check
-        with:
-          directory: ${{ steps.preflight.outputs.report-dir }}
 
       - name: Build GitHub action
         run: yarn package
