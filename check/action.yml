@@ -1,4 +1,4 @@
-name: Verify that all test cases have passed.
+name: Check test status after AppMap preflight
 description: |
   This action verifies that all test cases have passed. If any test cases have failed, the action
   will fail. It checks the test case succeeded / failed status by examining the JSON report

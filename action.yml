@@ -1,4 +1,5 @@
-name: Build a preflight report for a repository.
+name: AppMap Preflight
+description: Build a preflight report for a repository.
 inputs:
   base-revision:
     description: |
