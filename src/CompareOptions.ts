@@ -1,6 +1,6 @@
-export interface CommandOptions {
-  baseRef: string;
-  headRef: string;
+export default interface CompareOptions {
+  baseRevision: string;
+  headRevision: string;
   appmapCommand?: string;
   sourceDir?: string;
   githubToken?: string;

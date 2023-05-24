@@ -4,7 +4,7 @@ import verbose from './verbose';
 export default class Restore {
   public repository?: string;
   public githubToken?: string;
-  public appmapCommand = '/tmp/appmap';
+  public appmapCommand = 'appmap';
 
   constructor(public revision: string, public outputDir: string) {}
 

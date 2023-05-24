@@ -5,7 +5,7 @@ import log, {LogLevel} from './log';
 import verbose from './verbose';
 
 export default class Compare {
-  public appmapCommand = '/tmp/appmap';
+  public appmapCommand = 'appmap';
   public sourceDir?: string;
   public outputDir?: string;
 

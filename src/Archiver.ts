@@ -6,7 +6,7 @@ import log, {LogLevel} from './log';
 import verbose from './verbose';
 
 export default class Archiver {
-  public appmapCommand = '/tmp/appmap';
+  public appmapCommand = 'appmap';
   public archiveBranch = 'appmap-archive';
 
   constructor(public artifactStore: ArtifactStore, public revision: string) {}

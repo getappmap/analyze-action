@@ -13792,7 +13792,7 @@ class Archiver {
     constructor(artifactStore, revision) {
         this.artifactStore = artifactStore;
         this.revision = revision;
-        this.appmapCommand = '/tmp/appmap';
+        this.appmapCommand = 'appmap';
         this.archiveBranch = 'appmap-archive';
     }
     archive() {
@@ -13906,7 +13906,7 @@ class Compare {
         this.artifactStore = artifactStore;
         this.baseRevision = baseRevision;
         this.headRevision = headRevision;
-        this.appmapCommand = '/tmp/appmap';
+        this.appmapCommand = 'appmap';
     }
     compare() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -14078,15 +14078,23 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 const executeCommand_1 = __nccwpck_require__(8659);
 const verbose_1 = __importDefault(__nccwpck_require__(2472));
 class MarkdownReport {
-    constructor(reportDir) {
+    constructor(reportDir, options) {
         this.reportDir = reportDir;
-        this.appmapCommand = '/tmp/appmap';
+        this.options = options;
+        this.appmapCommand = 'appmap';
+        if (options.appmapCommand)
+            this.appmapCommand = options.appmapCommand;
     }
     generateReport() {
         return __awaiter(this, void 0, void 0, function* () {
-            let cmd = `${this.appmapCommand} compare-report ${this.reportDir}`;
+            let cmd = `${this.appmapCommand} compare-report`;
             if ((0, verbose_1.default)())
                 cmd += ' --verbose';
+            if (this.options.sourceURL)
+                cmd += ` --source-url '${this.options.sourceURL}'`;
+            if (this.options.appmapURL)
+                cmd += ` --appmap-url '${this.options.appmapURL}'`;
+            cmd += ` ${this.reportDir}`;
             yield (0, executeCommand_1.executeCommand)(cmd);
         });
     }
@@ -14120,7 +14128,7 @@ class Restore {
     constructor(revision, outputDir) {
         this.revision = revision;
         this.outputDir = outputDir;
-        this.appmapCommand = '/tmp/appmap';
+        this.appmapCommand = 'appmap';
     }
     restore() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -14342,13 +14350,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
 const argparse_1 = __nccwpck_require__(1515);
-const log_1 = __nccwpck_require__(5042);
+const log_1 = __importStar(__nccwpck_require__(5042));
 const verbose_1 = __importDefault(__nccwpck_require__(2472));
 const assert_1 = __importDefault(__nccwpck_require__(9491));
 const DirectoryArtifactStore_1 = __nccwpck_require__(7607);
-const run_1 = __importDefault(__nccwpck_require__(7764));
+const run_1 = __importStar(__nccwpck_require__(7764));
 const GitHubArtifactStore_1 = __nccwpck_require__(2427);
 const promises_1 = __nccwpck_require__(3292);
+const util_1 = __nccwpck_require__(3837);
 function runInGitHub() {
     return __awaiter(this, void 0, void 0, function* () {
         (0, verbose_1.default)(core.getBooleanInput('verbose'));
@@ -14356,24 +14365,48 @@ function runInGitHub() {
         const baseRevisionArg = core.getInput('base-revision');
         const headRevisionArg = core.getInput('head-revision');
         const sourceDir = core.getInput('source-dir');
-        const baseRef = baseRevisionArg || process.env.GITHUB_BASE_REF;
-        if (!baseRef)
+        const baseRevision = baseRevisionArg || process.env.GITHUB_BASE_REF;
+        if (!baseRevision)
             throw new Error('base-revision argument must be provided, or GITHUB_BASE_REF must be available from GitHub (https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables).');
-        const headRef = headRevisionArg || process.env.GITHUB_SHA;
+        const headRevision = headRevisionArg || process.env.GITHUB_SHA;
         const githubToken = core.getInput('github-token');
         const githubRepo = process.env.GITHUB_REPOSITORY;
-        (0, assert_1.default)(baseRef, 'baseRef is undefined');
-        (0, assert_1.default)(headRef, 'headRef is undefined');
-        const { reportDir, reportFile } = yield (0, run_1.default)(new GitHubArtifactStore_1.GitHubArtifactStore(), {
-            baseRef,
-            headRef,
+        const githubServer = process.env.GITHUB_SERVER_URL;
+        const runId = process.env.GITHUB_RUN_ID;
+        (0, assert_1.default)(baseRevision, 'baseRef is undefined');
+        (0, assert_1.default)(headRevision, 'headRef is undefined');
+        (0, assert_1.default)(githubRepo, 'githubRepo is undefined');
+        (0, assert_1.default)(githubServer, 'githubServer is undefined');
+        (0, assert_1.default)(runId, 'githubRepo is undefined');
+        const compareOptions = {
+            baseRevision,
+            headRevision,
             sourceDir,
             githubRepo,
             githubToken,
+        };
+        (0, log_1.default)(log_1.LogLevel.Debug, `compareOptions: ${(0, util_1.inspect)(compareOptions)}`);
+        const [owner, repo] = githubRepo.split('/');
+        const sourceURL = new URL(githubServer);
+        sourceURL.pathname = [githubRepo, 'blob', headRevision].join('/');
+        const appmapURLParams = new URLSearchParams({
+            owner,
+            repo,
+            run_id: runId,
+            base_revision: baseRevision,
+            head_revision: headRevision,
         });
-        core.setOutput('report-dir', reportDir);
+        const appmapURL = new URL(`https://app.land/github_artifact?${appmapURLParams.toString()}`);
+        const reportOptions = {
+            sourceURL,
+            appmapURL,
+        };
+        (0, log_1.default)(log_1.LogLevel.Debug, `reportOptions: ${(0, util_1.inspect)(reportOptions)}`);
+        const compareResult = yield (0, run_1.default)(new GitHubArtifactStore_1.GitHubArtifactStore(), compareOptions);
+        const reportResult = yield (0, run_1.summarizeChanges)(compareResult.reportDir, reportOptions);
+        core.setOutput('report-dir', compareResult.reportDir);
         if (process.env.GITHUB_STEP_SUMMARY) {
-            yield (0, promises_1.cp)(reportFile, process.env.GITHUB_STEP_SUMMARY);
+            yield (0, promises_1.cp)(reportResult.reportFile, process.env.GITHUB_STEP_SUMMARY);
         }
     });
 }
@@ -14384,13 +14417,15 @@ function runLocally() {
         });
         parser.add_argument('-v', '--verbose');
         parser.add_argument('-d', '--directory', { help: 'Program working directory' });
-        parser.add_argument('--appmap-command', { default: '/tmp/appmap' });
+        parser.add_argument('--appmap-command', { default: 'appmap' });
         parser.add_argument('--base-revision', { required: true });
         parser.add_argument('--head-revision', { required: true });
         parser.add_argument('--source-dir');
         parser.add_argument('--github-token');
         parser.add_argument('--github-repo');
         parser.add_argument('--artifact-dir', { default: '.appmap/artifacts' });
+        parser.add_argument('--source-url');
+        parser.add_argument('--appmap-url');
         const options = parser.parse_args();
         (0, verbose_1.default)(options.verbose === 'true' || options.verbose === true);
         const artifactDir = options.artifact_dir;
@@ -14398,14 +14433,23 @@ function runLocally() {
         const directory = options.directory;
         if (directory)
             process.chdir(directory);
-        yield (0, run_1.default)(new DirectoryArtifactStore_1.DirectoryArtifactStore(artifactDir), {
+        const compareOptions = {
             appmapCommand: options.appmap_command,
-            baseRef: options.base_revision,
-            headRef: options.head_revision,
+            baseRevision: options.base_revision,
+            headRevision: options.head_revision,
             sourceDir: options.source_dir,
             githubToken: options.github_token || process.env.GITHUB_TOKEN,
             githubRepo: options.github_repo,
-        });
+        };
+        const reportOptions = {};
+        if (options.appmap_command)
+            reportOptions.appmapCommand = options.appmap_command;
+        if (options.source_url)
+            reportOptions.sourceURL = new URL(options.source_url);
+        if (options.appmap_url)
+            reportOptions.appmapURL = new URL(options.appmap_url);
+        const compareResult = yield (0, run_1.default)(new DirectoryArtifactStore_1.DirectoryArtifactStore(artifactDir), compareOptions);
+        yield (0, run_1.summarizeChanges)(compareResult.reportDir, reportOptions);
     });
 }
 if (require.main === require.cache[eval('__filename')]) {
@@ -14446,10 +14490,10 @@ const Archiver_1 = __importDefault(__nccwpck_require__(6393));
 const fs_1 = __nccwpck_require__(7147);
 const MarkdownReport_1 = __importDefault(__nccwpck_require__(4698));
 const assert_1 = __importDefault(__nccwpck_require__(9491));
-function run(artifactStore, options) {
+function compare(artifactStore, options) {
     return __awaiter(this, void 0, void 0, function* () {
-        const baseRevision = (yield (0, executeCommand_1.executeCommand)(`git rev-parse ${options.baseRef}`)).trim();
-        const headRevision = (yield (0, executeCommand_1.executeCommand)(`git rev-parse ${options.headRef}`)).trim();
+        const baseRevision = (yield (0, executeCommand_1.executeCommand)(`git rev-parse ${options.baseRevision}`)).trim();
+        const headRevision = (yield (0, executeCommand_1.executeCommand)(`git rev-parse ${options.headRevision}`)).trim();
         const outputDir = `.appmap/change-report/${baseRevision}-${headRevision}`;
         if ((0, fs_1.existsSync)(outputDir))
             throw new Error(`Output directory ${outputDir} already exists. Please remove it and try again.`);
@@ -14474,19 +14518,17 @@ function run(artifactStore, options) {
             comparer.appmapCommand = options.appmapCommand;
         if (options.sourceDir)
             comparer.sourceDir = options.sourceDir;
-        const { reportDir } = yield comparer.compare();
-        const reportFile = yield summarizeChanges(outputDir);
-        return { reportDir, reportFile };
+        return yield comparer.compare();
     });
 }
-exports["default"] = run;
-function summarizeChanges(outputDir) {
+exports["default"] = compare;
+function summarizeChanges(outputDir, options) {
     return __awaiter(this, void 0, void 0, function* () {
-        const reporter = new MarkdownReport_1.default(outputDir);
+        const reporter = new MarkdownReport_1.default(outputDir, options);
         const reportFile = (0, path_1.join)(outputDir, 'report.md');
         yield reporter.generateReport();
         (0, assert_1.default)((0, fs_1.existsSync)(reportFile), `${reportFile} does not exist`);
-        return reportFile;
+        return { reportFile };
     });
 }
 exports.summarizeChanges = summarizeChanges;

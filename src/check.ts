@@ -36,7 +36,7 @@ async function runInGitHub(): Promise<void> {
   }
 
   if (process.env.GITHUB_STEP_SUMMARY) {
-    await writeFile(summary.join('\n'), process.env.GITHUB_STEP_SUMMARY);
+    await writeFile(process.env.GITHUB_STEP_SUMMARY, summary.join('\n'));
   }
   process.exit(1);
 }
