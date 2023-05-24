@@ -1,4 +1,4 @@
-# getappmap/archive-appmap
+# getappmap/preflight-appmap-action
 
 GitHub action to build a preflight report of a repo.
 
