@@ -1,5 +1,5 @@
-name: AppMap Preflight
-description: Build a preflight report for a repository.
+name: AppMap Analysis
+description: Analyze the changes between two code revisions.
 inputs:
   base-revision:
     description: |
