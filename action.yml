@@ -13,6 +13,11 @@ inputs:
     description: |
       The GitHub token to use with the GitHub API to pull AppMap archives from build artifacts.
       Most commonly, you'll use `secrets.GITHUB_TOKEN`, which is automatically provided by GitHub.
+  fetch-history-days:
+    description: |
+      The number of days of history to fetch in order to find the most recent ancestor that has
+      an AppMap archive. The default is 30 days. If an archive is not found, within this time window,
+      the entire history will be fetched. To disable history fetching completely, set this value to 0.
   verbose:
     description: Enable verbose logging.
     default: 'false'

@@ -10,6 +10,7 @@ import {existsSync} from 'fs';
 import MarkdownReport from './MarkdownReport';
 import assert from 'assert';
 import ReportOptions from './ReportOptions';
+import fetchAndRestore from './fetchAndRestore';
 
 export default async function compare(
   artifactStore: ArtifactStore,
@@ -35,7 +36,8 @@ export default async function compare(
   if (options.githubToken) restorer.githubToken = options.githubToken;
   if (options.appmapCommand) restorer.appmapCommand = options.appmapCommand;
   if (options.githubRepo) restorer.repository = options.githubRepo;
-  await restorer.restore();
+  restorer.validate();
+  await fetchAndRestore(restorer, options.fetchHistoryDays);
 
   const comparer = new Compare(artifactStore, baseRevision, headRevision);
   comparer.outputDir = outputDir;
