@@ -10,6 +10,7 @@ import {GitHubArtifactStore} from './GitHubArtifactStore';
 import {cp} from 'fs/promises';
 import {inspect} from 'util';
 import ReportOptions from './ReportOptions';
+import CompareOptions from './CompareOptions';
 
 async function runInGitHub(): Promise<void> {
   verbose(core.getBooleanInput('verbose'));
@@ -18,6 +19,7 @@ async function runInGitHub(): Promise<void> {
   const baseRevisionArg = core.getInput('base-revision');
   const headRevisionArg = core.getInput('head-revision');
   const sourceDir = core.getInput('source-dir');
+  const fetchHistoryDays = parseInt(core.getInput('fetch-history-days') || '30');
 
   const baseRevision = baseRevisionArg || process.env.GITHUB_BASE_REF;
   if (!baseRevision)
@@ -26,23 +28,28 @@ async function runInGitHub(): Promise<void> {
     );
 
   const headRevision = headRevisionArg || process.env.GITHUB_SHA;
+  if (!headRevision)
+    throw new Error(
+      'head-revision argument must be provided, or GITHUB_SHA must be available from GitHub (https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables).'
+    );
+
   const githubToken = core.getInput('github-token');
   const githubRepo = process.env.GITHUB_REPOSITORY;
   const githubServer = process.env.GITHUB_SERVER_URL;
   const runId = process.env.GITHUB_RUN_ID;
 
-  assert(baseRevision, 'baseRef is undefined');
-  assert(headRevision, 'headRef is undefined');
-  assert(githubRepo, 'githubRepo is undefined');
-  assert(githubServer, 'githubServer is undefined');
-  assert(runId, 'githubRepo is undefined');
+  assert(githubToken, 'token is undefined');
+  assert(githubRepo, 'repository is undefined');
+  assert(githubServer, 'server URL is undefined');
+  assert(runId, 'run id is undefined');
 
-  const compareOptions = {
+  const compareOptions: CompareOptions = {
     baseRevision,
     headRevision,
     sourceDir,
     githubRepo,
     githubToken,
+    fetchHistoryDays,
   };
   log(LogLevel.Debug, `compareOptions: ${inspect(compareOptions)}`);
 
@@ -89,6 +96,7 @@ async function runLocally() {
   parser.add_argument('--artifact-dir', {default: '.appmap/artifacts'});
   parser.add_argument('--source-url');
   parser.add_argument('--appmap-url');
+  parser.add_argument('--fetch-history-days', {default: '30'});
 
   const options = parser.parse_args();
 
@@ -98,13 +106,14 @@ async function runLocally() {
   const directory = options.directory;
   if (directory) process.chdir(directory);
 
-  const compareOptions = {
+  const compareOptions: CompareOptions = {
     appmapCommand: options.appmap_command,
     baseRevision: options.base_revision,
     headRevision: options.head_revision,
     sourceDir: options.source_dir,
     githubToken: options.github_token || process.env.GITHUB_TOKEN,
     githubRepo: options.github_repo,
+    fetchHistoryDays: parseInt(options.fetch_history_days),
   };
 
   const reportOptions = {} as ReportOptions;

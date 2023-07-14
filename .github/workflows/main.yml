@@ -2,6 +2,11 @@ name: CI
 
 on:
   pull_request:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: '0 0 * * 0'
 
 env:
   APPMAP_TELEMETRY_DISABLED: 'true'
@@ -12,19 +17,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-        with:
-          # This is needed to see the version history, because
-          # checkout action doesn't fetch the base or head branches
-          ref: ${{ github.event.pull_request.head.ref }}
-          fetch-depth: 0
 
       - name: Install dependency libraries
         run: yarn install
 
-      - name: Install AppMap tools
-        run: |
-          curl -o /usr/local/bin/appmap -L https://github.com/getappmap/appmap-js/releases/download/%40appland%2Fappmap-preflight-v1.0-pre.24/appmap-preflight-linux-x64
-          chmod a+x /usr/local/bin/appmap
+      - name: Install AppMap
+        uses: getappmap/install-action@v1-pre.10
+        with:
+          verbose: true
 
       - name: Build
         run: yarn build
@@ -32,20 +32,21 @@ jobs:
       - name: Test
         run: yarn test
 
-      - name: Preflight
-        id: preflight
-        uses: ./
-        with:
-          base-revision: origin/main
-          head-revision: ${{ github.event.pull_request.head.sha }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build GitHub action
-        run: yarn package
-
       - name: Commit changes
         # If you forgot to package the distribution, you'll see a commit added to your PR
         uses: EndBug/add-and-commit@v7
         with:
           add: dist
           message: 'chore: Packaged distribution of the GitHub action'
+
+      - name: Archive AppMaps
+        uses: getappmap/archive-appmap-action@v1-pre.13
+        if: github.event_name != 'pull_request'
+
+      - name: Analyze AppMaps
+        uses: ./
+        if: (success() || failure()) && github.event_name == 'pull_request'
+        with:
+          base-revision: origin/main
+          head-revision: ${{ github.event.pull_request.head.sha }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}

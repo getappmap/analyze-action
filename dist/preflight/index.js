@@ -14122,6 +14122,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+const assert_1 = __importDefault(__nccwpck_require__(9491));
 const executeCommand_1 = __nccwpck_require__(8659);
 const verbose_1 = __importDefault(__nccwpck_require__(2472));
 class Restore {
@@ -14130,15 +14131,19 @@ class Restore {
         this.outputDir = outputDir;
         this.appmapCommand = 'appmap';
     }
+    validate() {
+        if (this.repository && !this.githubToken)
+            throw new Error(`GitHub repository specified, but no GitHub token provided`);
+    }
     restore() {
         return __awaiter(this, void 0, void 0, function* () {
+            this.validate();
             let cmd = `${this.appmapCommand} restore --revision ${this.revision} --output-dir ${this.outputDir}`;
             if ((0, verbose_1.default)())
                 cmd += ' --verbose';
             let command = cmd;
             if (this.repository) {
-                if (!this.githubToken)
-                    throw new Error(`GitHub repository specified, but no GitHub token provided`);
+                (0, assert_1.default)(this.githubToken);
                 command = {
                     cmd: cmd + ` --github-repo ${this.repository}`,
                     options: {
@@ -14187,11 +14192,20 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.executeCommand = void 0;
+exports.executeCommand = exports.ExecuteOptions = void 0;
 const child_process_1 = __nccwpck_require__(2081);
 const log_1 = __importStar(__nccwpck_require__(5042));
 const verbose_1 = __importDefault(__nccwpck_require__(2472));
-function executeCommand(cmd, printCommand = (0, verbose_1.default)(), printStdout = (0, verbose_1.default)(), printStderr = (0, verbose_1.default)()) {
+class ExecuteOptions {
+    constructor() {
+        this.printCommand = (0, verbose_1.default)();
+        this.printStdout = (0, verbose_1.default)();
+        this.printStderr = (0, verbose_1.default)();
+        this.allowedCodes = [0];
+    }
+}
+exports.ExecuteOptions = ExecuteOptions;
+function executeCommand(cmd, options = new ExecuteOptions()) {
     let command;
     let commandString;
     if (typeof cmd === 'string') {
@@ -14202,29 +14216,31 @@ function executeCommand(cmd, printCommand = (0, verbose_1.default)(), printStdou
         commandString = cmd.cmd;
         command = (0, child_process_1.exec)(cmd.cmd, cmd.options || {});
     }
-    if (printCommand)
+    if (options.printCommand)
         console.log(commandString);
     const result = [];
     const stderr = [];
     if (command.stdout) {
         command.stdout.addListener('data', data => {
-            if (printStdout)
+            if (options.printStdout)
                 (0, log_1.default)(log_1.LogLevel.Debug, data);
             result.push(data);
         });
     }
     if (command.stderr) {
         command.stderr.addListener('data', data => {
-            if (printStderr)
+            if (options.printStderr)
                 (0, log_1.default)(log_1.LogLevel.Debug, data);
             stderr.push(data);
         });
     }
     return new Promise((resolve, reject) => {
         command.addListener('exit', (code, signal) => {
-            if (signal || code === 0) {
+            if (signal || (code !== null && options.allowedCodes.includes(code))) {
                 if (signal)
                     (0, log_1.default)(log_1.LogLevel.Warn, `Command "${commandString}" killed by signal ${signal}, exited with code ${code}`);
+                if (code !== 0)
+                    (0, log_1.default)(log_1.LogLevel.Info, `Command "${commandString}" exited with code ${code}, but that's an acceptable code in this context`);
                 resolve(result.join(''));
             }
             else {
@@ -14237,6 +14253,123 @@ function executeCommand(cmd, printCommand = (0, verbose_1.default)(), printStdou
     });
 }
 exports.executeCommand = executeCommand;
+
+
+/***/ }),
+
+/***/ 5537:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const gitFetch_1 = __nccwpck_require__(8810);
+const log_1 = __importStar(__nccwpck_require__(5042));
+function fetchAndRestore(restorer, sinceDays) {
+    return __awaiter(this, void 0, void 0, function* () {
+        if (sinceDays > 0) {
+            (0, log_1.default)(log_1.LogLevel.Debug, `Fetching ${sinceDays} days of repo history.`);
+            // Get the last N days of history (it's configurable)
+            yield (0, gitFetch_1.fetchInitialHistory)(sinceDays);
+        }
+        let fetched = false;
+        try {
+            yield restorer.restore();
+            (0, log_1.default)(log_1.LogLevel.Debug, `restore succeeded`);
+            fetched = true;
+        }
+        catch (e) {
+            (0, log_1.default)(log_1.LogLevel.Warn, `Unable to restore AppMap archive with ${sinceDays} days of history. Will now fetch the full repo history.`);
+            (0, log_1.default)(log_1.LogLevel.Debug, `Restore error: ${e.toString()}`);
+        }
+        if (!fetched) {
+            (0, log_1.default)(log_1.LogLevel.Info, `Fetching all repo history (--unshallow)`);
+            yield (0, gitFetch_1.fetchAllHistory)();
+            yield restorer.restore();
+            (0, log_1.default)(log_1.LogLevel.Debug, `restore succeeded after unshallow fetch`);
+        }
+    });
+}
+exports["default"] = fetchAndRestore;
+
+
+/***/ }),
+
+/***/ 8810:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.fetchAllHistory = exports.fetchInitialHistory = void 0;
+const executeCommand_1 = __nccwpck_require__(8659);
+const now_1 = __importDefault(__nccwpck_require__(3418));
+function fetchInitialHistory(sinceDays) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const today = (0, now_1.default)();
+        const fetchSinceDate = new Date(today.setDate(today.getDate() - sinceDays));
+        const year = fetchSinceDate.getFullYear();
+        const month = String(fetchSinceDate.getMonth() + 1).padStart(2, '0');
+        const day = String(fetchSinceDate.getDate()).padStart(2, '0');
+        const formattedDate = `${year}-${month}-${day}`;
+        yield (0, executeCommand_1.executeCommand)(`git fetch --shallow-since ${formattedDate}`);
+    });
+}
+exports.fetchInitialHistory = fetchInitialHistory;
+// If that fails, get all the history
+function fetchAllHistory() {
+    return __awaiter(this, void 0, void 0, function* () {
+        const executeOptions = new executeCommand_1.ExecuteOptions();
+        // 128: fatal: --unshallow on a complete repository does not make sense
+        executeOptions.allowedCodes = [0, 128];
+        yield (0, executeCommand_1.executeCommand)(`git fetch --unshallow`, executeOptions);
+    });
+}
+exports.fetchAllHistory = fetchAllHistory;
 
 
 /***/ }),
@@ -14307,6 +14440,20 @@ exports["default"] = log;
 
 /***/ }),
 
+/***/ 3418:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+function now() {
+    return new Date();
+}
+exports["default"] = now;
+
+
+/***/ }),
+
 /***/ 6278:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -14365,25 +14512,28 @@ function runInGitHub() {
         const baseRevisionArg = core.getInput('base-revision');
         const headRevisionArg = core.getInput('head-revision');
         const sourceDir = core.getInput('source-dir');
+        const fetchHistoryDays = parseInt(core.getInput('fetch-history-days') || '30');
         const baseRevision = baseRevisionArg || process.env.GITHUB_BASE_REF;
         if (!baseRevision)
             throw new Error('base-revision argument must be provided, or GITHUB_BASE_REF must be available from GitHub (https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables).');
         const headRevision = headRevisionArg || process.env.GITHUB_SHA;
+        if (!headRevision)
+            throw new Error('head-revision argument must be provided, or GITHUB_SHA must be available from GitHub (https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables).');
         const githubToken = core.getInput('github-token');
         const githubRepo = process.env.GITHUB_REPOSITORY;
         const githubServer = process.env.GITHUB_SERVER_URL;
         const runId = process.env.GITHUB_RUN_ID;
-        (0, assert_1.default)(baseRevision, 'baseRef is undefined');
-        (0, assert_1.default)(headRevision, 'headRef is undefined');
-        (0, assert_1.default)(githubRepo, 'githubRepo is undefined');
-        (0, assert_1.default)(githubServer, 'githubServer is undefined');
-        (0, assert_1.default)(runId, 'githubRepo is undefined');
+        (0, assert_1.default)(githubToken, 'token is undefined');
+        (0, assert_1.default)(githubRepo, 'repository is undefined');
+        (0, assert_1.default)(githubServer, 'server URL is undefined');
+        (0, assert_1.default)(runId, 'run id is undefined');
         const compareOptions = {
             baseRevision,
             headRevision,
             sourceDir,
             githubRepo,
             githubToken,
+            fetchHistoryDays,
         };
         (0, log_1.default)(log_1.LogLevel.Debug, `compareOptions: ${(0, util_1.inspect)(compareOptions)}`);
         const [owner, repo] = githubRepo.split('/');
@@ -14426,6 +14576,7 @@ function runLocally() {
         parser.add_argument('--artifact-dir', { default: '.appmap/artifacts' });
         parser.add_argument('--source-url');
         parser.add_argument('--appmap-url');
+        parser.add_argument('--fetch-history-days', { default: '30' });
         const options = parser.parse_args();
         (0, verbose_1.default)(options.verbose === 'true' || options.verbose === true);
         const artifactDir = options.artifact_dir;
@@ -14440,6 +14591,7 @@ function runLocally() {
             sourceDir: options.source_dir,
             githubToken: options.github_token || process.env.GITHUB_TOKEN,
             githubRepo: options.github_repo,
+            fetchHistoryDays: parseInt(options.fetch_history_days),
         };
         const reportOptions = {};
         if (options.appmap_command)
@@ -14490,6 +14642,7 @@ const Archiver_1 = __importDefault(__nccwpck_require__(6393));
 const fs_1 = __nccwpck_require__(7147);
 const MarkdownReport_1 = __importDefault(__nccwpck_require__(4698));
 const assert_1 = __importDefault(__nccwpck_require__(9491));
+const fetchAndRestore_1 = __importDefault(__nccwpck_require__(5537));
 function compare(artifactStore, options) {
     return __awaiter(this, void 0, void 0, function* () {
         const baseRevision = (yield (0, executeCommand_1.executeCommand)(`git rev-parse ${options.baseRevision}`)).trim();
@@ -14511,7 +14664,8 @@ function compare(artifactStore, options) {
             restorer.appmapCommand = options.appmapCommand;
         if (options.githubRepo)
             restorer.repository = options.githubRepo;
-        yield restorer.restore();
+        restorer.validate();
+        yield (0, fetchAndRestore_1.default)(restorer, options.fetchHistoryDays);
         const comparer = new Compare_1.default(artifactStore, baseRevision, headRevision);
         comparer.outputDir = outputDir;
         if (options.appmapCommand)
