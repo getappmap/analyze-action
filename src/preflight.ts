@@ -10,6 +10,7 @@ import {GitHubArtifactStore} from './GitHubArtifactStore';
 import {cp} from 'fs/promises';
 import {inspect} from 'util';
 import ReportOptions from './ReportOptions';
+import Commenter from './Commenter';
 
 async function runInGitHub(): Promise<void> {
   verbose(core.getBooleanInput('verbose'));
@@ -67,6 +68,9 @@ async function runInGitHub(): Promise<void> {
 
   const compareResult = await compare(new GitHubArtifactStore(), compareOptions);
   const reportResult = await summarizeChanges(compareResult.reportDir, reportOptions);
+
+  const commenter = new Commenter(reportResult.reportFile);
+  await commenter.comment();
 
   core.setOutput('report-dir', compareResult.reportDir);
   if (process.env.GITHUB_STEP_SUMMARY) {
