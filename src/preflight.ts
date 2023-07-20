@@ -12,6 +12,7 @@ import {inspect} from 'util';
 import ReportOptions from './ReportOptions';
 import CompareOptions from './CompareOptions';
 import Commenter from './Commenter';
+import Annotator from './Annotator';
 
 async function runInGitHub(): Promise<void> {
   verbose(core.getBooleanInput('verbose'));
@@ -78,6 +79,9 @@ async function runInGitHub(): Promise<void> {
 
   const commenter = new Commenter(reportResult.reportFile, githubToken);
   await commenter.comment();
+
+  const annotator = new Annotator(compareResult.reportDir, githubToken);
+  await annotator.annotate();
 
   core.setOutput('report-dir', compareResult.reportDir);
   if (process.env.GITHUB_STEP_SUMMARY) {
