@@ -1,14 +1,14 @@
 import * as core from '@actions/core';
-import {ArgumentParser} from 'argparse';
+import { ArgumentParser } from 'argparse';
 
-import log, {ActionLogger, LogLevel, setLogger} from './log';
+import log, { ActionLogger, LogLevel, setLogger } from './log';
 import verbose from './verbose';
 import assert from 'assert';
-import {DirectoryArtifactStore} from './DirectoryArtifactStore';
-import compare, {summarizeChanges} from './run';
-import {GitHubArtifactStore} from './GitHubArtifactStore';
-import {cp} from 'fs/promises';
-import {inspect} from 'util';
+import { DirectoryArtifactStore } from './DirectoryArtifactStore';
+import compare, { summarizeChanges } from './run';
+import { GitHubArtifactStore } from './GitHubArtifactStore';
+import { cp } from 'fs/promises';
+import { inspect } from 'util';
 import ReportOptions from './ReportOptions';
 import CompareOptions from './CompareOptions';
 import Commenter from './Commenter';
@@ -94,17 +94,17 @@ async function runLocally() {
     description: 'Preflight command',
   });
   parser.add_argument('-v', '--verbose');
-  parser.add_argument('-d', '--directory', {help: 'Program working directory'});
-  parser.add_argument('--appmap-command', {default: 'appmap'});
-  parser.add_argument('--base-revision', {required: true});
-  parser.add_argument('--head-revision', {required: true});
+  parser.add_argument('-d', '--directory', { help: 'Program working directory' });
+  parser.add_argument('--appmap-command', { default: 'appmap' });
+  parser.add_argument('--base-revision', { required: true });
+  parser.add_argument('--head-revision', { required: true });
   parser.add_argument('--source-dir');
   parser.add_argument('--github-token');
   parser.add_argument('--github-repo');
-  parser.add_argument('--artifact-dir', {default: '.appmap/artifacts'});
+  parser.add_argument('--artifact-dir', { default: '.appmap/artifacts' });
   parser.add_argument('--source-url');
   parser.add_argument('--appmap-url');
-  parser.add_argument('--fetch-history-days', {default: '30'});
+  parser.add_argument('--fetch-history-days', { default: '30' });
 
   const options = parser.parse_args();
 

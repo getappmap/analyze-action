@@ -48,12 +48,17 @@ export default class Commenter {
     >;
 
     let comment: ListCommentsResponseDataType[0] | undefined;
-    for await (const { data: comments } of octokit.paginate.iterator(octokit.rest.issues.listComments, {
-      ...context.repo,
-      issue_number,
-    })) {
+    for await (const { data: comments } of octokit.paginate.iterator(
+      octokit.rest.issues.listComments,
+      {
+        ...context.repo,
+        issue_number,
+      }
+    )) {
       // TODO: don't use "any" type
-      comment = comments.find((comment: any) => comment?.body?.includes(Commenter.COMMENT_TAG_PATTERN));
+      comment = comments.find((comment: any) =>
+        comment?.body?.includes(Commenter.COMMENT_TAG_PATTERN)
+      );
       if (comment) break;
     }
 

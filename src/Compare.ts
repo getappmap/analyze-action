@@ -1,7 +1,7 @@
-import {join} from 'path';
+import { join } from 'path';
 import ArtifactStore from './ArtifactStore';
-import {executeCommand} from './executeCommand';
-import log, {LogLevel} from './log';
+import { executeCommand } from './executeCommand';
+import log, { LogLevel } from './log';
 import verbose from './verbose';
 
 export default class Compare {
@@ -15,7 +15,7 @@ export default class Compare {
     public headRevision: string
   ) {}
 
-  async compare(): Promise<{reportDir: string}> {
+  async compare(): Promise<{ reportDir: string }> {
     const reportDir =
       this.outputDir || `.appmap/change-report/${this.baseRevision}-${this.headRevision}`;
 

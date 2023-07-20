@@ -1,12 +1,12 @@
 import Compare from './Compare';
 import Restore from './Restore';
-import {executeCommand} from './executeCommand';
-import {mkdir} from 'fs/promises';
-import {join} from 'path';
+import { executeCommand } from './executeCommand';
+import { mkdir } from 'fs/promises';
+import { join } from 'path';
 import Archiver from './Archiver';
 import ArtifactStore from './ArtifactStore';
 import CompareOptions from './CompareOptions';
-import {existsSync} from 'fs';
+import { existsSync } from 'fs';
 import MarkdownReport from './MarkdownReport';
 import assert from 'assert';
 import ReportOptions from './ReportOptions';
@@ -15,7 +15,7 @@ import fetchAndRestore from './fetchAndRestore';
 export default async function compare(
   artifactStore: ArtifactStore,
   options: CompareOptions
-): Promise<{reportDir: string}> {
+): Promise<{ reportDir: string }> {
   const baseRevision = (await executeCommand(`git rev-parse ${options.baseRevision}`)).trim();
   const headRevision = (await executeCommand(`git rev-parse ${options.headRevision}`)).trim();
 
@@ -24,7 +24,7 @@ export default async function compare(
     throw new Error(
       `Output directory ${outputDir} already exists. Please remove it and try again.`
     );
-  await mkdir(outputDir, {recursive: true});
+  await mkdir(outputDir, { recursive: true });
 
   const archiver = new Archiver(artifactStore, headRevision);
   if (options.appmapCommand) archiver.appmapCommand = options.appmapCommand;
@@ -50,10 +50,10 @@ export default async function compare(
 export async function summarizeChanges(
   outputDir: string,
   options: ReportOptions
-): Promise<{reportFile: string}> {
+): Promise<{ reportFile: string }> {
   const reporter = new MarkdownReport(outputDir, options);
   const reportFile = join(outputDir, 'report.md');
   await reporter.generateReport();
   assert(existsSync(reportFile), `${reportFile} does not exist`);
-  return {reportFile};
+  return { reportFile };
 }

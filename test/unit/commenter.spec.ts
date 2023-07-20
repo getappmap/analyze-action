@@ -4,7 +4,7 @@ import sinon, { SinonSandbox, SinonSpy } from 'sinon';
 import * as github from '@actions/github';
 
 import Commenter from '../../src/Commenter';
-import { reportPath } from "../util";
+import { reportPath } from '../util';
 
 const mockGithubContext = {
   payload: {
@@ -28,7 +28,7 @@ const mockOctokit = {
       createComment() {},
       updateComment() {},
     },
-  }
+  },
 };
 
 const reportString = fs.readFileSync(reportPath);
@@ -68,20 +68,20 @@ describe('Commenter', () => {
 
   it('updates an existing comment if one exists', async () => {
     const fakeComment = {
-        body: Commenter.COMMENT_TAG_PATTERN,
-        id: 1,
-      };
+      body: Commenter.COMMENT_TAG_PATTERN,
+      id: 1,
+    };
 
     const commenter = new Commenter(reportPath, 'dummyGithubToken');
-    sandbox.stub(commenter, 'getAppMapComment').resolves(fakeComment)
+    sandbox.stub(commenter, 'getAppMapComment').resolves(fakeComment);
     await commenter.comment();
 
     const expectedArgs = [
       {
         body: expectedBody,
         comment_id: fakeComment.id,
-      }
-    ]
+      },
+    ];
 
     assert.deepEqual(updateCommentSpy.callCount, 1);
     assert.deepEqual(updateCommentSpy.args, [expectedArgs]);

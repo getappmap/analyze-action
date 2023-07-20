@@ -1,12 +1,12 @@
 import * as core from '@actions/core';
-import {ArgumentParser} from 'argparse';
+import { ArgumentParser } from 'argparse';
 
 import verbose from './verbose';
-import {ActionLogger, setLogger} from './log';
+import { ActionLogger, setLogger } from './log';
 import assert from 'assert';
-import {readFile, writeFile} from 'fs/promises';
-import {join} from 'path';
-import {ChangeReport} from './ChangeReport';
+import { readFile, writeFile } from 'fs/promises';
+import { join } from 'path';
+import { ChangeReport } from './ChangeReport';
 
 export async function run(directory: string): Promise<string[] | undefined> {
   const reportFile = JSON.parse(
@@ -46,7 +46,7 @@ async function runLocally() {
     description: 'Preflight check command',
   });
   parser.add_argument('-v', '--verbose');
-  parser.add_argument('-d', '--directory', {help: 'Report directory', required: true});
+  parser.add_argument('-d', '--directory', { help: 'Report directory', required: true });
 
   const options = parser.parse_args();
 

@@ -1,5 +1,5 @@
 import ReportOptions from './ReportOptions';
-import {executeCommand} from './executeCommand';
+import { executeCommand } from './executeCommand';
 import verbose from './verbose';
 
 export default class MarkdownReport {

@@ -1,5 +1,5 @@
-import {ChildProcess, exec, ExecOptions} from 'child_process';
-import log, {LogLevel} from './log';
+import { ChildProcess, exec, ExecOptions } from 'child_process';
+import log, { LogLevel } from './log';
 import verbose from './verbose';
 
 export type Command = {
@@ -31,13 +31,13 @@ export function executeCommand(
   const result: string[] = [];
   const stderr: string[] = [];
   if (command.stdout) {
-    command.stdout.addListener('data', data => {
+    command.stdout.addListener('data', (data) => {
       if (options.printStdout) log(LogLevel.Debug, data);
       result.push(data);
     });
   }
   if (command.stderr) {
-    command.stderr.addListener('data', data => {
+    command.stderr.addListener('data', (data) => {
       if (options.printStderr) log(LogLevel.Debug, data);
       stderr.push(data);
     });
