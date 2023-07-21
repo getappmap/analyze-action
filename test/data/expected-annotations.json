@@ -1,0 +1,50 @@
+[
+  {
+    "path": "app/helpers/sessions_helper.rb",
+    "annotation_level": "warning",
+    "title": "N plus 1 SQL query",
+    "message": "app_views_users_index_html_erb.render[257] contains 30 occurrences of SQL: SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" = ? LIMIT ?",
+    "start_line": 19,
+    "end_line": 19
+  },
+  {
+    "path": "test/controllers/microposts_controller_test.rb",
+    "annotation_level": "failure",
+    "title": "Test Failure",
+    "message": "ActionController::RoutingError: No route matches [POST] \"/microposts\"\n    test/controllers/microposts_controller_test.rb:11:in `block (2 levels) in <class:MicropostsControllerTest>'\n    test/controllers/microposts_controller_test.rb:10:in `block in <class:MicropostsControllerTest>'",
+    "start_line": 9,
+    "end_line": 9
+  },
+  {
+    "path": "test/controllers/microposts_controller_test.rb",
+    "annotation_level": "failure",
+    "title": "Test Failure",
+    "message": "NoMethodError: undefined method `micropost_path' for #<MicropostsControllerTest:0x00007f7419191d58>\nDid you mean?  microposts\n    test/controllers/microposts_controller_test.rb:28:in `block (2 levels) in <class:MicropostsControllerTest>'\n    test/controllers/microposts_controller_test.rb:27:in `block in <class:MicropostsControllerTest>'",
+    "start_line": 24,
+    "end_line": 24
+  },
+  {
+    "path": "test/controllers/microposts_controller_test.rb",
+    "annotation_level": "failure",
+    "title": "Test Failure",
+    "message": "NoMethodError: undefined method `micropost_path' for #<MicropostsControllerTest:0x00007f7418f3fa28>\nDid you mean?  microposts\n    test/controllers/microposts_controller_test.rb:18:in `block (2 levels) in <class:MicropostsControllerTest>'\n    test/controllers/microposts_controller_test.rb:17:in `block in <class:MicropostsControllerTest>'",
+    "start_line": 16,
+    "end_line": 16
+  },
+  {
+    "path": "test/integration/microposts_interface_test.rb",
+    "annotation_level": "failure",
+    "title": "Test Failure",
+    "message": "ActionView::Template::Error: undefined method `micropost_path' for #<ActionView::Base:0x00000000031768>\n\n              target.public_send(method, *args)\n                    ^^^^^^^^^^^^\nDid you mean?  microposts_path\n    app/views/microposts/_micropost.html.erb:13\n    app/views/shared/_feed.html.erb:3\n    app/views/static_pages/home.html.erb:16\n    test/integration/microposts_interface_test.rb:11:in `block in <class:MicropostsInterfaceTest>'",
+    "start_line": 9,
+    "end_line": 9
+  },
+  {
+    "path": "test/integration/users_login_test.rb",
+    "annotation_level": "failure",
+    "title": "Test Failure",
+    "message": "ActionView::Template::Error: undefined method `micropost_path' for #<ActionView::Base:0x0000000002e6d0>\n\n              target.public_send(method, *args)\n                    ^^^^^^^^^^^^\nDid you mean?  microposts_path\n    app/views/microposts/_micropost.html.erb:13\n    app/views/users/show.html.erb:19\n    test/integration/users_login_test.rb:46:in `block in <class:ValidLoginTest>'",
+    "start_line": 45,
+    "end_line": 45
+  }
+]
