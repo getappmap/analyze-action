@@ -1,16 +1,16 @@
 import * as github from '@actions/github';
+import { Octokit } from '@octokit/rest';
 import { GetResponseDataTypeFromEndpointMethod } from '@octokit/types';
 
 import assert from 'assert';
 import fs from 'fs';
 
 export default class Commenter {
-  // TODO: don't use "any" type
-  private readonly octokit: any;
+  private readonly octokit: Octokit;
   public static readonly COMMENT_TAG_PATTERN = '<!-- "appmap" -->';
 
   constructor(private readonly filePath: string, private readonly githubToken: string) {
-    this.octokit = github.getOctokit(this.githubToken);
+    this.octokit = github.getOctokit(this.githubToken) as unknown as Octokit;
   }
 
   public async comment() {
@@ -55,8 +55,7 @@ export default class Commenter {
         issue_number,
       }
     )) {
-      // TODO: don't use "any" type
-      comment = comments.find((comment: any) =>
+      comment = comments.find((comment) =>
         comment?.body?.includes(Commenter.COMMENT_TAG_PATTERN)
       );
       if (comment) break;
