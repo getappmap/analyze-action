@@ -7,6 +7,7 @@ import * as github from '@actions/github';
 import Annotator from '../../src/Annotator';
 import { dataDir } from '../util';
 import { Finding } from '../../src/Finding';
+import { Octokit } from '@octokit/rest';
 
 const mockSha = 'fakeShaValue';
 const mockOwner = 'fakeOwnerValue';
@@ -45,17 +46,18 @@ const mockOctokit = {
 
 describe('Annotator', () => {
   let sandbox: SinonSandbox;
+  let octokit: Octokit;
   let createCheckSpy: SinonSpy;
   let updateCheckSpy: SinonSpy;
   let annotator: Annotator;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
+    octokit = mockOctokit as any;
     sandbox.stub(github, 'context').value(mockGithubContext);
-    sandbox.stub(github, 'getOctokit').returns(mockOctokit as any);
     createCheckSpy = sandbox.spy(mockOctokit.rest.checks, 'create');
     updateCheckSpy = sandbox.spy(mockOctokit.rest.checks, 'update');
-    annotator = new Annotator(dataDir, 'dummyGithubToken');
+    annotator = new Annotator(octokit, dataDir);
   });
 
   afterEach(() => {

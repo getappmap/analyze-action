@@ -13,6 +13,8 @@ import ReportOptions from './ReportOptions';
 import CompareOptions from './CompareOptions';
 import Commenter from './Commenter';
 import Annotator from './Annotator';
+import { getOctokit } from '@actions/github';
+import { Octokit } from '@octokit/rest';
 
 async function runInGitHub(): Promise<void> {
   verbose(core.getBooleanInput('verbose'));
@@ -76,11 +78,12 @@ async function runInGitHub(): Promise<void> {
 
   const compareResult = await compare(new GitHubArtifactStore(), compareOptions);
   const reportResult = await summarizeChanges(compareResult.reportDir, reportOptions);
+  const octokit = getOctokit(githubToken) as unknown as Octokit;
 
-  const commenter = new Commenter(reportResult.reportFile, githubToken);
+  const commenter = new Commenter(octokit, reportResult.reportFile);
   await commenter.comment();
 
-  const annotator = new Annotator(compareResult.reportDir, githubToken);
+  const annotator = new Annotator(octokit, compareResult.reportDir);
   await annotator.annotate();
 
   core.setOutput('report-dir', compareResult.reportDir);

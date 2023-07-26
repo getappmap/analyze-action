@@ -5,12 +5,14 @@ import { GetResponseDataTypeFromEndpointMethod } from '@octokit/types';
 import assert from 'assert';
 import fs from 'fs';
 
+type Comment = {
+  id: number;
+};
+
 export default class Commenter {
-  private readonly octokit: Octokit;
   public static readonly COMMENT_TAG_PATTERN = '<!-- "appmap" -->';
 
-  constructor(private readonly filePath: string, private readonly githubToken: string) {
-    this.octokit = github.getOctokit(this.githubToken) as unknown as Octokit;
+  constructor(private readonly octokit: Octokit, private readonly filePath: string) {
   }
 
   public async comment() {
@@ -39,7 +41,7 @@ export default class Commenter {
     }
   }
 
-  public async getAppMapComment(issue_number: number): Promise<any> {
+  public async getAppMapComment(issue_number: number): Promise<Comment | undefined> {
     const { context } = github;
     const { octokit } = this;
 

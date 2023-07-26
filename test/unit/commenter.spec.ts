@@ -1,10 +1,11 @@
 import assert from 'assert';
 import * as fs from 'fs';
-import sinon, { SinonSandbox, SinonSpy } from 'sinon';
+import sinon, { SinonSandbox } from 'sinon';
 import * as github from '@actions/github';
 
 import Commenter from '../../src/Commenter';
 import { reportPath } from '../util';
+import { Octokit } from '@octokit/rest';
 
 const mockGithubContext = {
   payload: {
@@ -36,15 +37,14 @@ const expectedBody = `${reportString}\n${Commenter.COMMENT_TAG_PATTERN}`;
 
 describe('Commenter', () => {
   let sandbox: SinonSandbox;
-  let createCommentSpy: SinonSpy;
-  let updateCommentSpy: SinonSpy;
+  let octokit: Octokit;
+  let commenter: Commenter;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
+    octokit = mockOctokit as any;
     sandbox.stub(github, 'context').value(mockGithubContext);
-    sandbox.stub(github, 'getOctokit').returns(mockOctokit as any);
-    createCommentSpy = sandbox.spy(mockOctokit.rest.issues, 'createComment');
-    updateCommentSpy = sandbox.spy(mockOctokit.rest.issues, 'updateComment');
+    commenter = new Commenter(octokit, reportPath);
   });
 
   afterEach(() => {
@@ -52,7 +52,9 @@ describe('Commenter', () => {
   });
 
   it('creates a new comment if one does not exist', async () => {
-    const commenter = new Commenter(reportPath, 'dummyGithubToken');
+    const createCommentSpy = sandbox.spy(mockOctokit.rest.issues, 'createComment');
+
+    sandbox.stub(commenter, 'getAppMapComment').resolves();
     await commenter.comment();
 
     const expectedArgs = [
@@ -67,12 +69,13 @@ describe('Commenter', () => {
   });
 
   it('updates an existing comment if one exists', async () => {
+    const updateCommentSpy = sandbox.spy(mockOctokit.rest.issues, 'updateComment');
+
     const fakeComment = {
       body: Commenter.COMMENT_TAG_PATTERN,
       id: 1,
     };
 
-    const commenter = new Commenter(reportPath, 'dummyGithubToken');
     sandbox.stub(commenter, 'getAppMapComment').resolves(fakeComment);
     await commenter.comment();
 

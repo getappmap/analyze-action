@@ -33,16 +33,14 @@ type LocationInfo = {
 };
 
 export default class Annotator {
-  private readonly octokit: Octokit;
   private readonly changeReportPath: string;
   private readonly ref: string;
   private readonly repo: string;
   private readonly owner: string;
   public static readonly CHECK_TITLE = 'appmap-annotations';
 
-  constructor(reportDir: string, githubToken: string) {
+  constructor(private readonly octokit: Octokit, reportDir: string) {
     this.changeReportPath = path.join(reportDir, 'change-report.json');
-    this.octokit = getOctokit(githubToken) as unknown as Octokit;
 
     const pullRequest = context.payload.pull_request;
     const { owner, repo } = context.repo;
