@@ -23797,7 +23797,7 @@ class Annotator {
             messages.push(`${notices} ${noun} found`);
         }
         return (messages.join('\n') +
-            '\n[markdown test](https://www.google.com)\n\n<a href="https://www.google.com>HTML test</a>');
+            '\n[markdown test](https://www.google.com)\n\n<a href="https://www.google.com">HTML test</a>');
     }
     stats(annotations) {
         const result = { failures: 0, warnings: 0, notices: 0 };
@@ -23872,11 +23872,11 @@ class Annotator {
         return {
             path: preferredLocation.path,
             annotation_level: AnnotationLevel.Warning,
-            title: '[markdown test](https://www.google.com)\n\n<a href="https://www.google.com>HTML test</a>',
-            message: '[markdown test](https://www.google.com)\n\n<a href="https://www.google.com>HTML test</a>',
+            title: '[markdown test](https://www.google.com)\n\n<a href="https://www.google.com">HTML test</a>',
+            message: '[markdown test](https://www.google.com)\n\n<a href="https://www.google.com">HTML test</a>',
             start_line: preferredLocation.lineNumber,
             end_line: preferredLocation.lineNumber,
-            raw_details: '[markdown test](https://www.google.com)\n\n<a href="https://www.google.com>HTML test</a>',
+            raw_details: '[markdown test](https://www.google.com)\n\n<a href="https://www.google.com">HTML test</a>',
         };
     }
     annotationFromTestFailure(testFailure) {
