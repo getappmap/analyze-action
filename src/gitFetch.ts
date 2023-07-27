@@ -1,4 +1,4 @@
-import {ExecuteOptions, executeCommand} from './executeCommand';
+import { ExecuteOptions, executeCommand } from './executeCommand';
 import now from './now';
 
 export async function fetchInitialHistory(sinceDays: number) {

@@ -1,4 +1,4 @@
-import {readFile, writeFile} from 'fs/promises';
+import { readFile, writeFile } from 'fs/promises';
 
 export default async function ignoreWorkingDir() {
   let gitIgnore: string;

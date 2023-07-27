@@ -1,8 +1,8 @@
-import {existsSync} from 'fs';
-import {basename, dirname, join} from 'path';
+import { existsSync } from 'fs';
+import { basename, dirname, join } from 'path';
 import ArtifactStore from './ArtifactStore';
-import {executeCommand} from './executeCommand';
-import log, {LogLevel} from './log';
+import { executeCommand } from './executeCommand';
+import log, { LogLevel } from './log';
 import verbose from './verbose';
 
 export default class Archiver {
@@ -11,19 +11,19 @@ export default class Archiver {
 
   constructor(public artifactStore: ArtifactStore, public revision: string) {}
 
-  async archive(): Promise<{archiveFile: string}> {
+  async archive(): Promise<{ archiveFile: string }> {
     {
       const existingArchives = [
         join('.appmap', 'archive', 'full', `${this.revision}.tar`),
         join('.appmap', 'archive', 'incremental', `${this.revision}.tar`),
       ]
-        .filter(file => existsSync(file))
+        .filter((file) => existsSync(file))
         // With alphabetical sort, 'full' archive will be preferred to 'incremental'
         .sort((a, b) => a.localeCompare(b));
       const existingArchive = existingArchives.shift();
       if (existingArchive) {
         log(LogLevel.Info, `Using existing AppMap archive ${existingArchive}`);
-        return {archiveFile: existingArchive};
+        return { archiveFile: existingArchive };
       }
     }
 
@@ -37,7 +37,7 @@ export default class Archiver {
       join('.appmap', 'archive', 'full', `${this.revision}.tar`),
       join('.appmap', 'archive', 'incremental', `${this.revision}.tar`),
     ]
-      .filter(file => existsSync(file))
+      .filter((file) => existsSync(file))
       // With alphabetical sort, 'full' archive will be preferred to 'incremental'
       .sort((a, b) => a.localeCompare(b));
 
@@ -64,7 +64,7 @@ export default class Archiver {
 
     await this.artifactStore.uploadArtifact(artifactName, [archiveFile]);
 
-    return {archiveFile};
+    return { archiveFile };
   }
 
   async unpack(archiveFile: string, directory: string) {

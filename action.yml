@@ -21,6 +21,11 @@ inputs:
   verbose:
     description: Enable verbose logging.
     default: 'false'
+  annotation-exclusions:
+    descriptions: |
+      Directories to ignore when generating annotations. Please enter the exclusions as a space-separated
+      list (e.g. build tmp dist).
+    default: node_modules vendor
 outputs:
   report-dir:
     description: Directory containing the report files.

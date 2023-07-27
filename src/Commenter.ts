@@ -1,16 +1,18 @@
 import * as github from '@actions/github';
+import { Octokit } from '@octokit/rest';
 import { GetResponseDataTypeFromEndpointMethod } from '@octokit/types';
 
 import assert from 'assert';
 import fs from 'fs';
 
+type Comment = {
+  id: number;
+};
+
 export default class Commenter {
-  // TODO: don't use "any" type
-  private readonly octokit: any;
   public static readonly COMMENT_TAG_PATTERN = '<!-- "appmap" -->';
 
-  constructor(private readonly filePath: string, private readonly githubToken: string) {
-    this.octokit = github.getOctokit(this.githubToken);
+  constructor(private readonly octokit: Octokit, private readonly filePath: string) {
   }
 
   public async comment() {
@@ -39,7 +41,7 @@ export default class Commenter {
     }
   }
 
-  public async getAppMapComment(issue_number: number): Promise<any> {
+  public async getAppMapComment(issue_number: number): Promise<Comment | undefined> {
     const { context } = github;
     const { octokit } = this;
 
@@ -48,12 +50,16 @@ export default class Commenter {
     >;
 
     let comment: ListCommentsResponseDataType[0] | undefined;
-    for await (const { data: comments } of octokit.paginate.iterator(octokit.rest.issues.listComments, {
-      ...context.repo,
-      issue_number,
-    })) {
-      // TODO: don't use "any" type
-      comment = comments.find((comment: any) => comment?.body?.includes(Commenter.COMMENT_TAG_PATTERN));
+    for await (const { data: comments } of octokit.paginate.iterator(
+      octokit.rest.issues.listComments,
+      {
+        ...context.repo,
+        issue_number,
+      }
+    )) {
+      comment = comments.find((comment) =>
+        comment?.body?.includes(Commenter.COMMENT_TAG_PATTERN)
+      );
       if (comment) break;
     }
 

@@ -1,17 +1,20 @@
 import * as core from '@actions/core';
-import {ArgumentParser} from 'argparse';
+import { ArgumentParser } from 'argparse';
 
-import log, {ActionLogger, LogLevel, setLogger} from './log';
+import log, { ActionLogger, LogLevel, setLogger } from './log';
 import verbose from './verbose';
 import assert from 'assert';
-import {DirectoryArtifactStore} from './DirectoryArtifactStore';
-import compare, {summarizeChanges} from './run';
-import {GitHubArtifactStore} from './GitHubArtifactStore';
-import {cp} from 'fs/promises';
-import {inspect} from 'util';
+import { DirectoryArtifactStore } from './DirectoryArtifactStore';
+import compare, { summarizeChanges } from './run';
+import { GitHubArtifactStore } from './GitHubArtifactStore';
+import { cp } from 'fs/promises';
+import { inspect } from 'util';
 import ReportOptions from './ReportOptions';
 import CompareOptions from './CompareOptions';
 import Commenter from './Commenter';
+import Annotator from './Annotator';
+import { getOctokit } from '@actions/github';
+import { Octokit } from '@octokit/rest';
 
 async function runInGitHub(): Promise<void> {
   verbose(core.getBooleanInput('verbose'));
@@ -75,9 +78,14 @@ async function runInGitHub(): Promise<void> {
 
   const compareResult = await compare(new GitHubArtifactStore(), compareOptions);
   const reportResult = await summarizeChanges(compareResult.reportDir, reportOptions);
+  const octokit = getOctokit(githubToken) as unknown as Octokit;
 
-  const commenter = new Commenter(reportResult.reportFile, githubToken);
+  const commenter = new Commenter(octokit, reportResult.reportFile);
   await commenter.comment();
+
+  const excludedDirectories = core.getInput('annotation-exclusions').split(' ');
+  const annotator = new Annotator(octokit, compareResult.reportDir, excludedDirectories);
+  await annotator.annotate();
 
   core.setOutput('report-dir', compareResult.reportDir);
   if (process.env.GITHUB_STEP_SUMMARY) {
@@ -90,17 +98,17 @@ async function runLocally() {
     description: 'Preflight command',
   });
   parser.add_argument('-v', '--verbose');
-  parser.add_argument('-d', '--directory', {help: 'Program working directory'});
-  parser.add_argument('--appmap-command', {default: 'appmap'});
-  parser.add_argument('--base-revision', {required: true});
-  parser.add_argument('--head-revision', {required: true});
+  parser.add_argument('-d', '--directory', { help: 'Program working directory' });
+  parser.add_argument('--appmap-command', { default: 'appmap' });
+  parser.add_argument('--base-revision', { required: true });
+  parser.add_argument('--head-revision', { required: true });
   parser.add_argument('--source-dir');
   parser.add_argument('--github-token');
   parser.add_argument('--github-repo');
-  parser.add_argument('--artifact-dir', {default: '.appmap/artifacts'});
+  parser.add_argument('--artifact-dir', { default: '.appmap/artifacts' });
   parser.add_argument('--source-url');
   parser.add_argument('--appmap-url');
-  parser.add_argument('--fetch-history-days', {default: '30'});
+  parser.add_argument('--fetch-history-days', { default: '30' });
 
   const options = parser.parse_args();
 

@@ -1,5 +1,5 @@
 import assert from 'assert';
-import {Command, executeCommand} from './executeCommand';
+import { Command, executeCommand } from './executeCommand';
 import verbose from './verbose';
 
 export default class Restore {
@@ -25,7 +25,7 @@ export default class Restore {
       command = {
         cmd: cmd + ` --github-repo ${this.repository}`,
         options: {
-          env: {...process.env, ...{GITHUB_TOKEN: this.githubToken}},
+          env: { ...process.env, ...{ GITHUB_TOKEN: this.githubToken } },
         },
       };
     }
