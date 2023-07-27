@@ -83,7 +83,8 @@ async function runInGitHub(): Promise<void> {
   const commenter = new Commenter(octokit, reportResult.reportFile);
   await commenter.comment();
 
-  const annotator = new Annotator(octokit, compareResult.reportDir);
+  const excludedDirectories = core.getInput('annotation-exclusions').split(' ');
+  const annotator = new Annotator(octokit, compareResult.reportDir, excludedDirectories);
   await annotator.annotate();
 
   core.setOutput('report-dir', compareResult.reportDir);

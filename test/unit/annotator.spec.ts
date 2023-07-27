@@ -57,7 +57,7 @@ describe('Annotator', () => {
     sandbox.stub(github, 'context').value(mockGithubContext);
     createCheckSpy = sandbox.spy(mockOctokit.rest.checks, 'create');
     updateCheckSpy = sandbox.spy(mockOctokit.rest.checks, 'update');
-    annotator = new Annotator(octokit, dataDir);
+    annotator = new Annotator(octokit, dataDir, ['node_modules', 'vendor']);
   });
 
   afterEach(() => {
@@ -118,6 +118,15 @@ describe('Annotator', () => {
         title: 'AppMap Finding',
       };
 
+      it('when both locations are desired it chooses the first one', () => {
+        const mockFinding = {
+          stack: ['app/testFile.rb:123', 'fakePath/fakeFile.fake:456'],
+        } as Finding;
+
+        const result = annotator.annotationFromFinding(mockFinding);
+        assert.deepEqual(result, expectedAnnotation);
+      });
+
       it('when the first location is desired', () => {
         const mockFinding = {
           stack: ['app/testFile.rb:123', '/home/fakeUser/fakePath/fakeFile.fake:456'],
@@ -156,6 +165,24 @@ describe('Annotator', () => {
         const result = annotator.annotationFromFinding(mockFinding);
         assert.deepEqual(result, undefined);
       });
+
+      it('when first location is in excluded directory', () => {
+        const mockFinding = {
+          stack: ['node_modules/someFile.txt:10', 'app/testFile.rb:123'],
+        } as Finding;
+
+        const result = annotator.annotationFromFinding(mockFinding);
+        assert.deepEqual(result, expectedAnnotation);
+      });
+
+      it('when all locations are in excluded directories', () => {
+        const mockFinding = {
+          stack: ['/home/fakeUser/fakeDir/node_modules/someFile.txt:10', 'vendor/app/testFile.rb:123'],
+        } as Finding;
+
+        const result = annotator.annotationFromFinding(mockFinding);
+        assert.deepEqual(result, undefined);
+      });
     });
 
     describe('on Windows', () => {
@@ -170,7 +197,18 @@ describe('Annotator', () => {
 
       beforeEach(() => {
         sandbox.stub(path, 'isAbsolute').callsFake(path.win32.isAbsolute);
+        sandbox.stub(path, 'sep').value(path.win32.sep);
       });
+
+      it('when both locations are desired it chooses the first one', () => {
+        const mockFinding = {
+          stack: ['app\\testFile.rb:123', 'fakePath\\fakeFile.fake:456'],
+        } as Finding;
+
+        const result = annotator.annotationFromFinding(mockFinding);
+        assert.deepEqual(result, expectedAnnotation);
+      });
+
 
       it('when the first location is desired', () => {
         const mockFinding = {
@@ -205,6 +243,24 @@ describe('Annotator', () => {
       it('when no locations have line numbers', () => {
         const mockFinding = {
           stack: ['app\\someFile.txt', 'app\\anotherPath\\anotherFile.rb'],
+        } as Finding;
+
+        const result = annotator.annotationFromFinding(mockFinding);
+        assert.deepEqual(result, undefined);
+      });
+
+      it('when first location is in excluded directory', () => {
+        const mockFinding = {
+          stack: ['node_modules\\someFile.txt:10', 'app\\testFile.rb:123'],
+        } as Finding;
+
+        const result = annotator.annotationFromFinding(mockFinding);
+        assert.deepEqual(result, expectedAnnotation);
+      });
+
+      it('when all locations are in excluded directories', () => {
+        const mockFinding = {
+          stack: ['C:\\Users\\Fake Directory\\node_modules\\someFile.txt:10', 'vendor\\app\\testFile.rb:123'],
         } as Finding;
 
         const result = annotator.annotationFromFinding(mockFinding);

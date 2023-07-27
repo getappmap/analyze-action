@@ -39,7 +39,11 @@ export default class Annotator {
   private readonly owner: string;
   public static readonly CHECK_TITLE = 'appmap-annotations';
 
-  constructor(private readonly octokit: Octokit, reportDir: string) {
+  constructor(
+    private readonly octokit: Octokit,
+    reportDir: string,
+    private readonly excludedDirectories: string[]
+  ) {
     this.changeReportPath = path.join(reportDir, 'change-report.json');
 
     const pullRequest = context.payload.pull_request;
@@ -157,10 +161,17 @@ export default class Annotator {
     return { path, lineNumber };
   }
 
+  private isPreferredLocation(info: LocationInfo | undefined): boolean {
+    if (!info || path.isAbsolute(info.path)) return false;
+
+    const pathComponents = info.path.split(/[\/\\]/);
+    return !this.excludedDirectories.some((directory) => pathComponents.includes(directory));
+  }
+
   public annotationFromFinding(finding: Finding): Annotation | undefined {
     const locationInfo = finding.stack.map(this.fileAndLineNumberFromLocation, this);
 
-    let preferredLocation = locationInfo.find((info) => info && !path.isAbsolute(info.path));
+    const preferredLocation = locationInfo.find(this.isPreferredLocation, this);
     if (!preferredLocation) return;
 
     return {
