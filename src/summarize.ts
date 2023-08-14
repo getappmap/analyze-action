@@ -16,7 +16,7 @@ async function main() {
 
   const options = parser.parse_args();
 
-  verbose(options.verbose === 'true' || options.verbose === true);
+  verbose(options.verbose);
   const directory = options.directory;
   if (directory) process.chdir(directory);
   const reportDir = options.report_dir;

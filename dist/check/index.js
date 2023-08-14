@@ -7029,7 +7029,7 @@ function runLocally() {
         parser.add_argument('-v', '--verbose');
         parser.add_argument('-d', '--directory', { help: 'Report directory', required: true });
         const options = parser.parse_args();
-        (0, verbose_1.default)(options.verbose === 'true' || options.verbose === true);
+        (0, verbose_1.default)(options.verbose);
         const directory = options.directory;
         (0, assert_1.default)(directory, 'directory argument is required');
         const summary = yield run(directory);
@@ -7126,8 +7126,8 @@ exports["default"] = log;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 let isVerbose = false;
 function verbose(v) {
-    if (v !== undefined) {
-        isVerbose = v;
+    if (v === true || v === 'true') {
+        isVerbose = true;
     }
     return isVerbose;
 }

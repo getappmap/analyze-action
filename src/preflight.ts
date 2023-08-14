@@ -17,7 +17,7 @@ import { getOctokit } from '@actions/github';
 import { Octokit } from '@octokit/rest';
 
 async function runInGitHub(): Promise<void> {
-  verbose(core.getBooleanInput('verbose'));
+  verbose(core.getInput('verbose'));
   setLogger(new ActionLogger());
 
   const baseRevisionArg = core.getInput('base-revision');
@@ -112,7 +112,7 @@ async function runLocally() {
 
   const options = parser.parse_args();
 
-  verbose(options.verbose === 'true' || options.verbose === true);
+  verbose(options.verbose);
   const artifactDir = options.artifact_dir;
   assert(artifactDir);
   const directory = options.directory;

@@ -50,7 +50,7 @@ async function runLocally() {
 
   const options = parser.parse_args();
 
-  verbose(options.verbose === 'true' || options.verbose === true);
+  verbose(options.verbose);
   const directory = options.directory;
   assert(directory, 'directory argument is required');
 

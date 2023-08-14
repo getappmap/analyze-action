@@ -24808,7 +24808,7 @@ const Annotator_1 = __importDefault(__nccwpck_require__(9392));
 const github_1 = __nccwpck_require__(5438);
 function runInGitHub() {
     return __awaiter(this, void 0, void 0, function* () {
-        (0, verbose_1.default)(core.getBooleanInput('verbose'));
+        (0, verbose_1.default)(core.getInput('verbose'));
         (0, log_1.setLogger)(new log_1.ActionLogger());
         const baseRevisionArg = core.getInput('base-revision');
         const headRevisionArg = core.getInput('head-revision');
@@ -24885,7 +24885,7 @@ function runLocally() {
         parser.add_argument('--appmap-url');
         parser.add_argument('--fetch-history-days', { default: '30' });
         const options = parser.parse_args();
-        (0, verbose_1.default)(options.verbose === 'true' || options.verbose === true);
+        (0, verbose_1.default)(options.verbose);
         const artifactDir = options.artifact_dir;
         (0, assert_1.default)(artifactDir);
         const directory = options.directory;
@@ -25027,8 +25027,8 @@ exports.batch = batch;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 let isVerbose = false;
 function verbose(v) {
-    if (v !== undefined) {
-        isVerbose = v;
+    if (v === true || v === 'true') {
+        isVerbose = true;
     }
     return isVerbose;
 }
