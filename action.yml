@@ -31,4 +31,4 @@ outputs:
     description: Directory containing the report files.
 runs:
   using: 'node16'
-  main: 'dist/preflight/index.js'
+  main: 'dist/analyze/index.js'

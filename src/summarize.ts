@@ -5,7 +5,7 @@ import ReportOptions from './ReportOptions';
 
 async function main() {
   const parser = new ArgumentParser({
-    description: 'Summarize preflight report',
+    description: 'Summarize the analysis report',
   });
   parser.add_argument('-v', '--verbose', { type: Boolean });
   parser.add_argument('-d', '--directory', { help: 'Program working directory' });

@@ -1,6 +1,6 @@
-# getappmap/preflight-appmap-action
+# getappmap/analyze-action
 
-GitHub action to build a preflight report of a repo.
+GitHub action to analyze the changes between two code revisions.
 
 ## Development
 
