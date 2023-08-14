@@ -7,7 +7,7 @@
   "scripts": {
     "compile": "tsc",
     "watch": "tsc --watch",
-    "package": "ncc build -o dist/preflight --source-map src/preflight.ts && ncc build -o dist/check --source-map src/check.ts",
+    "package": "ncc build -o dist/preflight --source-map src/preflight.ts",
     "build": "yarn compile && yarn package",
     "test": "appmap-agent-js -- jest --runInBand --no-cache",
     "clean": "rm -rf build dist tmp",
