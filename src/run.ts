@@ -28,6 +28,7 @@ export default async function compare(
 
   const archiver = new Archiver(artifactStore, headRevision);
   if (options.appmapCommand) archiver.appmapCommand = options.appmapCommand;
+  if (options.threadCount) archiver.threadCount = options.threadCount;
   const archiveResult = await archiver.archive();
   await archiver.unpack(archiveResult.archiveFile, join(outputDir, 'head'));
 

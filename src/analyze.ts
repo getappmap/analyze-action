@@ -24,6 +24,8 @@ async function runInGitHub(): Promise<void> {
   const headRevisionArg = core.getInput('head-revision');
   const sourceDir = core.getInput('source-dir');
   const fetchHistoryDays = parseInt(core.getInput('fetch-history-days') || '30');
+  const threadCountStr = core.getInput('thread-count');
+  const threadCount = threadCountStr ? parseInt(threadCountStr, 10) : undefined;
 
   const baseRevision = baseRevisionArg || process.env.GITHUB_BASE_REF;
   if (!baseRevision)
@@ -54,6 +56,7 @@ async function runInGitHub(): Promise<void> {
     githubRepo,
     githubToken,
     fetchHistoryDays,
+    threadCount,
   };
   log(LogLevel.Debug, `compareOptions: ${inspect(compareOptions)}`);
 
@@ -109,6 +112,7 @@ async function runLocally() {
   parser.add_argument('--source-url');
   parser.add_argument('--appmap-url');
   parser.add_argument('--fetch-history-days', { default: '30' });
+  parser.add_argument('--thread-count');
 
   const options = parser.parse_args();
 
@@ -127,6 +131,7 @@ async function runLocally() {
     githubRepo: options.github_repo,
     fetchHistoryDays: parseInt(options.fetch_history_days),
   };
+  if (options.thread_count) compareOptions.threadCount = parseInt(options.thread_count, 10);
 
   const reportOptions = {} as ReportOptions;
   if (options.appmap_command) reportOptions.appmapCommand = options.appmap_command;
