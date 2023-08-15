@@ -3,7 +3,6 @@ import * as executeCommand from '../src/executeCommand';
 import * as now from '../src/now';
 import Restore from '../src/Restore';
 import verbose from '../src/verbose';
-import { debug } from 'console';
 
 if (process.env.VERBOSE) verbose(true);
 

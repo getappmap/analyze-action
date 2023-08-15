@@ -1,6 +1,6 @@
-# getappmap/preflight-appmap-action
+# getappmap/analyze-action
 
-GitHub action to build a preflight report of a repo.
+GitHub action to analyze the changes between two code revisions.
 
 ## Development
 
@@ -20,6 +20,5 @@ $ yarn package
 
 ## TODO
 
-- [ ] Add description to action.yml.
+- [x] Add description to action.yml.
 - [ ] Update repo description in GitHub.
-- [ ] Use appmap-action-utils

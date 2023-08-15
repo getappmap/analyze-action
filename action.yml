@@ -1,5 +1,13 @@
 name: AppMap Analysis
-description: Analyze the changes between two code revisions.
+description: |
+  Analyze the changes between two code revisions. The analysis is performed by
+  comparing two AppMap archives - "base" and "head". The "base" archive is created by the
+  `getappmap/archive-action` action when code is merged to main. The "head" archive is created
+  by this action. The action will generate a report containing the differences between the two
+  archives. The report includes information such as root cause analysis of failed tests,
+  a list of API changes, new and resolved analysis findings (anti-patterns and flaws), 
+  and lists of new and changed AppMaps. This action will also add code annotations to identify
+  the root cause of failed tests and analysis findings.
 inputs:
   base-revision:
     description: |
@@ -18,17 +26,22 @@ inputs:
       The number of days of history to fetch in order to find the most recent ancestor that has
       an AppMap archive. The default is 30 days. If an archive is not found, within this time window,
       the entire history will be fetched. To disable history fetching completely, set this value to 0.
-  verbose:
-    description: Enable verbose logging.
-    default: 'false'
+  thread-count:
+    description:
+      Number of worker threads to use for processing the archive. Defaults to the number of CPUs /
+      cores, as reported by Node.js. If the worker machine has a high number of CPUs/cores, the
+      archive action may become I/O-bound rather than CPU-bound, and better performance might be
+      obtained by setting this value to a lower number.
   annotation-exclusions:
-    descriptions: |
+    description: |
       Directories to ignore when generating annotations. Please enter the exclusions as a space-separated
       list (e.g. build tmp dist).
     default: node_modules vendor
+  verbose:
+    description: Enable verbose logging.
 outputs:
   report-dir:
     description: Directory containing the report files.
 runs:
   using: 'node16'
-  main: 'dist/preflight/index.js'
+  main: 'dist/analyze/index.js'

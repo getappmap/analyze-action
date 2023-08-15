@@ -1,27 +1,41 @@
 import { existsSync } from 'fs';
 import { basename, dirname, join } from 'path';
 import ArtifactStore from './ArtifactStore';
-import { executeCommand } from './executeCommand';
+import { ExecuteOptions, executeCommand } from './executeCommand';
 import log, { LogLevel } from './log';
 import verbose from './verbose';
+
+export interface ArchiveDetector {
+  findExistingArchives(revision: string): string[];
+}
+
+class FileArchiveDetector implements ArchiveDetector {
+  findExistingArchives(revision: string): string[] {
+    return (
+      [
+        join('.appmap', 'archive', 'full', `${revision}.tar`),
+        join('.appmap', 'archive', 'incremental', `${revision}.tar`),
+      ]
+        .filter((file) => existsSync(file))
+        // With alphabetical sort, 'full' archive will be preferred to 'incremental'
+        .sort((a, b) => a.localeCompare(b))
+    );
+  }
+}
 
 export default class Archiver {
   public appmapCommand = 'appmap';
   public archiveBranch = 'appmap-archive';
+  public archiveDetector: ArchiveDetector = new FileArchiveDetector();
+  public threadCount?: number;
 
   constructor(public artifactStore: ArtifactStore, public revision: string) {}
 
   async archive(): Promise<{ archiveFile: string }> {
     {
-      const existingArchives = [
-        join('.appmap', 'archive', 'full', `${this.revision}.tar`),
-        join('.appmap', 'archive', 'incremental', `${this.revision}.tar`),
-      ]
-        .filter((file) => existsSync(file))
-        // With alphabetical sort, 'full' archive will be preferred to 'incremental'
-        .sort((a, b) => a.localeCompare(b));
-      const existingArchive = existingArchives.shift();
-      if (existingArchive) {
+      const existingArchives = this.archiveDetector.findExistingArchives(this.revision);
+      if (existingArchives?.length > 0) {
+        const existingArchive = existingArchives.shift()!;
         log(LogLevel.Info, `Using existing AppMap archive ${existingArchive}`);
         return { archiveFile: existingArchive };
       }
@@ -31,16 +45,13 @@ export default class Archiver {
 
     let archiveCommand = `${this.appmapCommand} archive --revision ${this.revision}`;
     if (verbose()) archiveCommand += ' --verbose';
-    await executeCommand(archiveCommand);
+    if (this.threadCount) archiveCommand += ` --thread-count ${this.threadCount}`;
+    const options = new ExecuteOptions();
+    options.printStderr = true;
+    options.printStdout = true;
+    await executeCommand(archiveCommand, options);
 
-    const archiveFiles = [
-      join('.appmap', 'archive', 'full', `${this.revision}.tar`),
-      join('.appmap', 'archive', 'incremental', `${this.revision}.tar`),
-    ]
-      .filter((file) => existsSync(file))
-      // With alphabetical sort, 'full' archive will be preferred to 'incremental'
-      .sort((a, b) => a.localeCompare(b));
-
+    const archiveFiles = this.archiveDetector.findExistingArchives(this.revision);
     if (archiveFiles.length === 0) {
       throw new Error(`No AppMap archives found in ${process.cwd()}`);
     }

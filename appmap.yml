@@ -1,4 +1,4 @@
-name: preflight-appmap-action
+name: analyze-action
 packages:
   - path: build
   - path: src

@@ -6,4 +6,5 @@ export default interface CompareOptions {
   sourceDir?: string;
   githubToken?: string;
   githubRepo?: string;
+  threadCount?: number;
 }
