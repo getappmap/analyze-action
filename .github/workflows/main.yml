@@ -22,9 +22,9 @@ jobs:
         run: yarn install
 
       - name: Install AppMap
-        uses: getappmap/install-action@v1-pre.10
+        uses: getappmap/install-action@v1
         with:
-          tools-url: https://github.com/getappmap/appmap-js/releases/download/%40appland%2Fappmap-faster-v1.0-pre.2/appmap-linux-x64
+          tools-url: https://github.com/getappmap/appmap-js/releases/download/%40appland%2Fappmap-faster-v1.0-pre.8/appmap-linux-x64
           github-token: ${{ secrets.GITHUB_TOKEN }}
           project-type: yarn
 
@@ -35,7 +35,7 @@ jobs:
         run: yarn test
 
       - name: Archive AppMaps
-        uses: getappmap/archive-appmap-action@v1-pre.14
+        uses: getappmap/archive-action@main
         if: github.event_name != 'pull_request'
 
       - name: Analyze AppMaps
@@ -55,3 +55,9 @@ jobs:
         with:
           add: dist
           message: 'chore: Packaged distribution of the GitHub action'
+
+      - uses: rickstaa/action-create-tag@v1
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          tag: v1
+          tag_exists_error: false
