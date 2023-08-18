@@ -391,6 +391,353 @@
         },
         "scopeModifiedDate": "2023-01-20T02:32:26.000Z",
         "eventsModifiedDate": "2022-04-12T14:25:33.000Z"
+      },
+      {
+        "appMapFile": "minitest/Users_index_index_as_admin_including_pagination_and_delete_links.appmap.json",
+        "checkId": "n-plus-one-query",
+        "ruleId": "n-plus-one-query",
+        "ruleTitle": "N plus 1 SQL query",
+        "event": {
+          "id": 289,
+          "event": "call",
+          "thread_id": 4320,
+          "sql_query": {
+            "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" = ? LIMIT ?",
+            "database_type": "sqlite"
+          }
+        },
+        "hash": "3f613b50dced1e74470e192f080e31374e00520c812945de867da4fcd8e09c65",
+        "hash_v2": "9838e8de4c4da24ba968182fd8fac81afa954f83fb84e090b8a9fb16519547e9",
+        "stack": [
+          "app/helpers/sessions_helper.rb:19",
+          "app/views/users/index.html.erb",
+          "/home/ahtrotta/.rbenv/versions/3.1.2/lib/ruby/gems/3.1.0/gems/actionpack-7.0.4/lib/action_controller/metal/renderers.rb:140"
+        ],
+        "scope": {
+          "id": 191,
+          "event": "call",
+          "thread_id": 4320,
+          "http_server_request": {
+            "request_method": "GET",
+            "path_info": "/users",
+            "normalized_path_info": "/users",
+            "headers": {
+              "Version": "HTTP/1.0",
+              "Host": "www.example.com",
+              "Accept": "text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5",
+              "Cookie": "_sample_app_session=8SoZ9xhY%2F1DI1uLcgrZxXCdEUa3v%2BwkM5TwzcbNcSI1AkEMnmMt%2FS4G%2BvFpk2Esp7MqIpAg8KWYtsEPs4%2B3iEea38K8kmt6gP9Rrkcw0yvRufCZT41WNZQMXS3pWnXfzgNhDt3%2BQ2vQE49ihaZ%2FF%2FONx%2Fr08b9Dk9DX1Q6udqpn9C1%2FNXls7gn9zS4qlN3LwrshV0PY4JR0CpiucfVPDuxM62VVL4WO5uZmFUlOZyBt8uR5v%2F9KVtMdZmu0jfIzIhcjAkh%2FRr%2BEF9Wz4aS%2Fzu9%2FY06k9UMkUH%2BTk1IicW9LzVQfmfyN8Pdt4MctdDJ4srbxp4EFUTvSQcqCl0QVkRFFajQKyMztxgfy910DsrA%3D%3D--jY7V62PgFwvU%2BeZs--V6S%2BUD4llvtsrZt9nYs5HA%3D%3D; remember_token=qdactQAVINZnzmwmaWhLKw; user_id=X6W1pC%2FFh09O1akO9MKUrpj6fBGH4HTqvgsgwOuCgzSVM6P1nY0gGb18CEn34s4ByimAv79%2FNXdwxYSM1qk%2FmqbLy1kHQ6I%3D--NHOzf6Wi56SaZl0E--sslpr8lRHqbS0AW8UYPq5Q%3D%3D",
+              "Content-Length": "0"
+            }
+          }
+        },
+        "message": "app_views_users_index_html_erb.render[257] contains 30 occurrences of SQL: SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" = ? LIMIT ?",
+        "groupMessage": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" = ? LIMIT ?",
+        "occurranceCount": 30,
+        "relatedEvents": [
+          {
+            "id": 289,
+            "event": "call",
+            "thread_id": 4320,
+            "sql_query": {
+              "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" = ? LIMIT ?",
+              "database_type": "sqlite"
+            }
+          },
+          {
+            "id": 303,
+            "event": "call",
+            "thread_id": 4320,
+            "sql_query": {
+              "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" = ? LIMIT ?",
+              "database_type": "sqlite"
+            }
+          },
+          {
+            "id": 317,
+            "event": "call",
+            "thread_id": 4320,
+            "sql_query": {
+              "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" = ? LIMIT ?",
+              "database_type": "sqlite"
+            }
+          },
+          {
+            "id": 331,
+            "event": "call",
+            "thread_id": 4320,
+            "sql_query": {
+              "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" = ? LIMIT ?",
+              "database_type": "sqlite"
+            }
+          },
+          {
+            "id": 345,
+            "event": "call",
+            "thread_id": 4320,
+            "sql_query": {
+              "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" = ? LIMIT ?",
+              "database_type": "sqlite"
+            }
+          },
+          {
+            "id": 359,
+            "event": "call",
+            "thread_id": 4320,
+            "sql_query": {
+              "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" = ? LIMIT ?",
+              "database_type": "sqlite"
+            }
+          },
+          {
+            "id": 373,
+            "event": "call",
+            "thread_id": 4320,
+            "sql_query": {
+              "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" = ? LIMIT ?",
+              "database_type": "sqlite"
+            }
+          },
+          {
+            "id": 387,
+            "event": "call",
+            "thread_id": 4320,
+            "sql_query": {
+              "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" = ? LIMIT ?",
+              "database_type": "sqlite"
+            }
+          },
+          {
+            "id": 401,
+            "event": "call",
+            "thread_id": 4320,
+            "sql_query": {
+              "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" = ? LIMIT ?",
+              "database_type": "sqlite"
+            }
+          },
+          {
+            "id": 415,
+            "event": "call",
+            "thread_id": 4320,
+            "sql_query": {
+              "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" = ? LIMIT ?",
+              "database_type": "sqlite"
+            }
+          },
+          {
+            "id": 429,
+            "event": "call",
+            "thread_id": 4320,
+            "sql_query": {
+              "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" = ? LIMIT ?",
+              "database_type": "sqlite"
+            }
+          },
+          {
+            "id": 443,
+            "event": "call",
+            "thread_id": 4320,
+            "sql_query": {
+              "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" = ? LIMIT ?",
+              "database_type": "sqlite"
+            }
+          },
+          {
+            "id": 457,
+            "event": "call",
+            "thread_id": 4320,
+            "sql_query": {
+              "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" = ? LIMIT ?",
+              "database_type": "sqlite"
+            }
+          },
+          {
+            "id": 471,
+            "event": "call",
+            "thread_id": 4320,
+            "sql_query": {
+              "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" = ? LIMIT ?",
+              "database_type": "sqlite"
+            }
+          },
+          {
+            "id": 485,
+            "event": "call",
+            "thread_id": 4320,
+            "sql_query": {
+              "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" = ? LIMIT ?",
+              "database_type": "sqlite"
+            }
+          },
+          {
+            "id": 499,
+            "event": "call",
+            "thread_id": 4320,
+            "sql_query": {
+              "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" = ? LIMIT ?",
+              "database_type": "sqlite"
+            }
+          },
+          {
+            "id": 513,
+            "event": "call",
+            "thread_id": 4320,
+            "sql_query": {
+              "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" = ? LIMIT ?",
+              "database_type": "sqlite"
+            }
+          },
+          {
+            "id": 527,
+            "event": "call",
+            "thread_id": 4320,
+            "sql_query": {
+              "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" = ? LIMIT ?",
+              "database_type": "sqlite"
+            }
+          },
+          {
+            "id": 541,
+            "event": "call",
+            "thread_id": 4320,
+            "sql_query": {
+              "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" = ? LIMIT ?",
+              "database_type": "sqlite"
+            }
+          },
+          {
+            "id": 555,
+            "event": "call",
+            "thread_id": 4320,
+            "sql_query": {
+              "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" = ? LIMIT ?",
+              "database_type": "sqlite"
+            }
+          },
+          {
+            "id": 569,
+            "event": "call",
+            "thread_id": 4320,
+            "sql_query": {
+              "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" = ? LIMIT ?",
+              "database_type": "sqlite"
+            }
+          },
+          {
+            "id": 583,
+            "event": "call",
+            "thread_id": 4320,
+            "sql_query": {
+              "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" = ? LIMIT ?",
+              "database_type": "sqlite"
+            }
+          },
+          {
+            "id": 597,
+            "event": "call",
+            "thread_id": 4320,
+            "sql_query": {
+              "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" = ? LIMIT ?",
+              "database_type": "sqlite"
+            }
+          },
+          {
+            "id": 611,
+            "event": "call",
+            "thread_id": 4320,
+            "sql_query": {
+              "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" = ? LIMIT ?",
+              "database_type": "sqlite"
+            }
+          },
+          {
+            "id": 625,
+            "event": "call",
+            "thread_id": 4320,
+            "sql_query": {
+              "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" = ? LIMIT ?",
+              "database_type": "sqlite"
+            }
+          },
+          {
+            "id": 639,
+            "event": "call",
+            "thread_id": 4320,
+            "sql_query": {
+              "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" = ? LIMIT ?",
+              "database_type": "sqlite"
+            }
+          },
+          {
+            "id": 653,
+            "event": "call",
+            "thread_id": 4320,
+            "sql_query": {
+              "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" = ? LIMIT ?",
+              "database_type": "sqlite"
+            }
+          },
+          {
+            "id": 667,
+            "event": "call",
+            "thread_id": 4320,
+            "sql_query": {
+              "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" = ? LIMIT ?",
+              "database_type": "sqlite"
+            }
+          },
+          {
+            "id": 681,
+            "event": "call",
+            "thread_id": 4320,
+            "sql_query": {
+              "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" = ? LIMIT ?",
+              "database_type": "sqlite"
+            }
+          },
+          {
+            "id": 695,
+            "event": "call",
+            "thread_id": 4320,
+            "sql_query": {
+              "sql": "SELECT \"users\".* FROM \"users\" WHERE \"users\".\"id\" = ? LIMIT ?",
+              "database_type": "sqlite"
+            }
+          },
+          {
+            "id": 257,
+            "event": "call",
+            "thread_id": 4320,
+            "defined_class": "app_views_users_index_html_erb",
+            "method_id": "render",
+            "path": "app/views/users/index.html.erb",
+            "static": true,
+            "receiver": {
+              "class": "ActionView::TemplateRenderer",
+              "object_id": 111540,
+              "value": "#<ActionView::TemplateRenderer:0x00007f740ab4caa0>"
+            }
+          }
+        ],
+        "impactDomain": "Performance",
+        "participatingEvents": {
+          "commonAncestor": {
+            "id": 257,
+            "event": "call",
+            "thread_id": 4320,
+            "defined_class": "app_views_users_index_html_erb",
+            "method_id": "render",
+            "path": "app/views/users/index.html.erb",
+            "static": true,
+            "receiver": {
+              "class": "ActionView::TemplateRenderer",
+              "object_id": 111540,
+              "value": "#<ActionView::TemplateRenderer:0x00007f740ab4caa0>"
+            }
+          }
+        },
+        "scopeModifiedDate": "2023-01-20T02:32:26.000Z",
+        "eventsModifiedDate": "2022-04-12T14:25:33.000Z"
       }
     ],
     "resolved": [
