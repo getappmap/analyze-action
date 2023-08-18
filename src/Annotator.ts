@@ -199,8 +199,14 @@ export default class Annotator {
     };
   }
 
+  private deduplicateFindings(findings: Finding[]): Finding[] {
+    const uniqueFindings = {} as Record<string, Finding>;
+    findings.forEach((finding) => uniqueFindings[finding.hash_v2] = finding);
+    return Object.values(uniqueFindings);
+  }
+
   private generateAnnotations(changeReport: ChangeReport): Annotation[] {
-    const findings = changeReport?.findingDiff?.new || [];
+    const findings = this.deduplicateFindings(changeReport?.findingDiff?.new || []);
     const findingsAnnotations = findings.map(this.annotationFromFinding, this);
 
     const testFailures = changeReport?.testFailures || [];
