@@ -23892,9 +23892,14 @@ class Annotator {
             end_line: lineNumber,
         };
     }
+    deduplicateFindings(findings) {
+        const uniqueFindings = {};
+        findings.forEach((finding) => uniqueFindings[finding.hash_v2] = finding);
+        return Object.values(uniqueFindings);
+    }
     generateAnnotations(changeReport) {
         var _a;
-        const findings = ((_a = changeReport === null || changeReport === void 0 ? void 0 : changeReport.findingDiff) === null || _a === void 0 ? void 0 : _a.new) || [];
+        const findings = this.deduplicateFindings(((_a = changeReport === null || changeReport === void 0 ? void 0 : changeReport.findingDiff) === null || _a === void 0 ? void 0 : _a.new) || []);
         const findingsAnnotations = findings.map(this.annotationFromFinding, this);
         const testFailures = (changeReport === null || changeReport === void 0 ? void 0 : changeReport.testFailures) || [];
         const testAnnotations = testFailures.map(this.annotationFromTestFailure, this);
