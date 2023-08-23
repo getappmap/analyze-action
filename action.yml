@@ -1,4 +1,7 @@
 name: AppMap Analysis
+branding:
+  icon: alert-circle
+  color: purple
 description: |
   Analyze the changes between two code revisions. 
 inputs:
