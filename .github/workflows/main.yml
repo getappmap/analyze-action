@@ -52,6 +52,7 @@ jobs:
       - name: Commit changes
         # If you forgot to package the distribution, you'll see a commit added to your PR
         uses: EndBug/add-and-commit@v7
+        if: github.event_name == 'pull_request'
         with:
           add: dist
           message: 'chore: Packaged distribution of the GitHub action'
@@ -60,4 +61,4 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           tag: v1
-          tag_exists_error: false
+          force_push_tag: false
