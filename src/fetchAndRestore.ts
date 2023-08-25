@@ -2,7 +2,7 @@ import Restore from './Restore';
 import { fetchAllHistory, fetchInitialHistory } from './gitFetch';
 import log, { LogLevel } from './log';
 
-export default async function fetchAndRestore(restorer: Restore, sinceDays: number) {
+export default async function fetchAndRestore(restorer: Restore, sinceDays: number): Promise<boolean> {
   if (sinceDays > 0) {
     log(LogLevel.Debug, `Fetching ${sinceDays} days of repo history.`);
     // Get the last N days of history (it's configurable)
@@ -25,7 +25,16 @@ export default async function fetchAndRestore(restorer: Restore, sinceDays: numb
   if (!fetched) {
     log(LogLevel.Info, `Fetching all repo history (--unshallow)`);
     await fetchAllHistory();
-    await restorer.restore();
-    log(LogLevel.Debug, `restore succeeded after unshallow fetch`);
+
+    try {
+      await restorer.restore();
+      log(LogLevel.Debug, `restore succeeded after unshallow fetch`);
+      fetched = true;
+    } catch (e) {
+      log(LogLevel.Warn, `Unable to restore AppMap archive with full repo history. It may not exist.`);
+      log(LogLevel.Debug, `Restore error: ${(e as any).toString()}`);
+    }
   }
+
+  return fetched;
 }
