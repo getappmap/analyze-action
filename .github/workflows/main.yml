@@ -12,7 +12,7 @@ env:
   APPMAP_TELEMETRY_DISABLED: 'true'
 
 jobs:
-  ci:
+  test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -24,7 +24,6 @@ jobs:
       - name: Install AppMap
         uses: getappmap/install-action@v1
         with:
-          tools-url: https://github.com/getappmap/appmap-js/releases/download/%40appland%2Fappmap-faster-v1.0-pre.8/appmap-linux-x64
           github-token: ${{ secrets.GITHUB_TOKEN }}
           project-type: yarn
 
@@ -34,17 +33,12 @@ jobs:
       - name: Test
         run: yarn test
 
-      - name: Archive AppMaps
-        uses: getappmap/archive-action@main
-        if: github.event_name != 'pull_request'
-
-      - name: Analyze AppMaps
-        uses: ./
-        if: (success() || failure()) && github.event_name == 'pull_request'
+      - name: Save AppMaps
+        uses: actions/cache/save@v3
+        if: always()
         with:
-          base-revision: ${{ github.event.pull_request.base.sha }}
-          head-revision: ${{ github.event.pull_request.head.sha }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: tmp/appmap
+          key: appmaps-${{ github.sha }}-${{ github.run_attempt }}
 
       - name: Build GitHub action
         run: yarn package
@@ -62,3 +56,8 @@ jobs:
         with:
           tag: v1
           force_push_tag: true
+
+  appmap-analysis:
+    if: always()
+    needs: [test]
+    uses: ./.github/workflows/appmap-analysis.yml
