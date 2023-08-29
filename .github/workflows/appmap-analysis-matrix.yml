@@ -1,0 +1,42 @@
+name: AppMap Analysis
+
+on:
+  workflow_call:
+    inputs:
+      archive-count:
+        required: true
+        type: number
+jobs:
+  analyze:
+    # If your organization has 4-core runners available, you should change this line to use
+    # those runners. 4 cores offers the best performance for AppMap analysis.
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      checks: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install AppMap tools
+        uses: getappmap/install-action@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          install-appmap-library: false
+
+      - name: Merge AppMaps
+        uses: getappmap/archive-action/merge@v1
+        with:
+          revision: ${{ github.event.pull_request.head.sha }}
+          archive-count: ${{ inputs.archive-count }}
+
+      - name: Analyze AppMaps
+        uses: getappmap/analyze-action@v1
+        if: (success() || failure()) && github.event_name == 'pull_request'
+        with:
+          base-revision: ${{ github.event.pull_request.base.sha }}
+          head-revision: ${{ github.event.pull_request.head.sha }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
