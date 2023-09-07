@@ -24522,6 +24522,7 @@ const util_1 = __nccwpck_require__(3837);
 const Commenter_1 = __importDefault(__nccwpck_require__(2882));
 const Annotator_1 = __importDefault(__nccwpck_require__(9392));
 const github_1 = __nccwpck_require__(5438);
+const uploadRunStats_1 = __importDefault(__nccwpck_require__(7443));
 function runInGitHub() {
     return __awaiter(this, void 0, void 0, function* () {
         (0, verbose_1.default)(core.getInput('verbose'));
@@ -24572,7 +24573,8 @@ function runInGitHub() {
             appmapURL,
         };
         (0, log_1.default)(log_1.LogLevel.Debug, `reportOptions: ${(0, util_1.inspect)(reportOptions)}`);
-        const compareResult = yield (0, run_1.default)(new GitHubArtifactStore_1.GitHubArtifactStore(), compareOptions);
+        const artifactStore = new GitHubArtifactStore_1.GitHubArtifactStore();
+        const compareResult = yield (0, run_1.default)(artifactStore, compareOptions);
         const reportResult = yield (0, run_1.summarizeChanges)(compareResult.reportDir, reportOptions);
         const octokit = (0, github_1.getOctokit)(githubToken);
         const commenter = new Commenter_1.default(octokit, reportResult.reportFile);
@@ -24580,6 +24582,7 @@ function runInGitHub() {
         const excludedDirectories = core.getInput('annotation-exclusions').split(' ');
         const annotator = new Annotator_1.default(octokit, compareResult.reportDir, excludedDirectories);
         yield annotator.annotate();
+        yield (0, uploadRunStats_1.default)(artifactStore);
         core.setOutput('report-dir', compareResult.reportDir);
         if (process.env.GITHUB_STEP_SUMMARY) {
             yield (0, promises_1.cp)(reportResult.reportFile, process.env.GITHUB_STEP_SUMMARY);
@@ -24999,7 +25002,7 @@ function compare(artifactStore, options) {
             comparer.appmapCommand = options.appmapCommand;
         if (options.sourceDir)
             comparer.sourceDir = options.sourceDir;
-        return yield comparer.compare();
+        return comparer.compare();
     });
 }
 exports["default"] = compare;
@@ -25013,6 +25016,92 @@ function summarizeChanges(outputDir, options) {
     });
 }
 exports.summarizeChanges = summarizeChanges;
+
+
+/***/ }),
+
+/***/ 7443:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const promises_1 = __nccwpck_require__(3977);
+const verbose_1 = __importDefault(__nccwpck_require__(2472));
+const node_path_1 = __nccwpck_require__(9411);
+const log_1 = __importStar(__nccwpck_require__(5042));
+const RunStatsDirectory = (0, node_path_1.join)('.appmap', 'run-stats');
+function uploadRunStats(store) {
+    return __awaiter(this, void 0, void 0, function* () {
+        (0, log_1.default)(log_1.LogLevel.Info, 'Building the run stats artifact');
+        try {
+            const stats = yield (0, promises_1.stat)(RunStatsDirectory);
+            if (!stats.isDirectory()) {
+                throw new Error(`${RunStatsDirectory} is not a directory`);
+            }
+        }
+        catch (e) {
+            (0, log_1.default)(log_1.LogLevel.Warn, `The run stats directory (${RunStatsDirectory}) was not found`);
+            if ((0, verbose_1.default)())
+                (0, log_1.default)(log_1.LogLevel.Warn, String(e));
+            return;
+        }
+        const ents = yield (0, promises_1.readdir)(RunStatsDirectory, { withFileTypes: true });
+        const statsFiles = ents
+            .filter((ent) => ent.isFile() && ent.name.endsWith('.json'))
+            .map((ent) => (0, node_path_1.join)(RunStatsDirectory, ent.name))
+            .sort();
+        if (statsFiles.length === 0) {
+            (0, log_1.default)(log_1.LogLevel.Warn, 'No run stats files found, skipping upload');
+            return;
+        }
+        try {
+            yield store.uploadArtifact('appmap-run-stats', statsFiles.slice(-1));
+            console.info(`Success! Run stats have been uploaded.`);
+        }
+        catch (e) {
+            (0, log_1.default)(log_1.LogLevel.Warn, 'Failed to upload run stats');
+            if ((0, verbose_1.default)())
+                (0, log_1.default)(log_1.LogLevel.Warn, String(e));
+        }
+    });
+}
+exports["default"] = uploadRunStats;
 
 
 /***/ }),
@@ -25134,6 +25223,22 @@ module.exports = require("https");
 
 "use strict";
 module.exports = require("net");
+
+/***/ }),
+
+/***/ 3977:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("node:fs/promises");
+
+/***/ }),
+
+/***/ 9411:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("node:path");
 
 /***/ }),
 
