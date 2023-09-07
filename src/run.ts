@@ -45,7 +45,7 @@ export default async function compare(
   if (options.appmapCommand) comparer.appmapCommand = options.appmapCommand;
   if (options.sourceDir) comparer.sourceDir = options.sourceDir;
 
-  return await comparer.compare();
+  return comparer.compare();
 }
 
 export async function summarizeChanges(

@@ -15,6 +15,7 @@ import Commenter from './Commenter';
 import Annotator from './Annotator';
 import { getOctokit } from '@actions/github';
 import { Octokit } from '@octokit/rest';
+import uploadRunStats from './uploadRunStats';
 
 async function runInGitHub(): Promise<void> {
   verbose(core.getInput('verbose'));
@@ -79,7 +80,8 @@ async function runInGitHub(): Promise<void> {
 
   log(LogLevel.Debug, `reportOptions: ${inspect(reportOptions)}`);
 
-  const compareResult = await compare(new GitHubArtifactStore(), compareOptions);
+  const artifactStore = new GitHubArtifactStore();
+  const compareResult = await compare(artifactStore, compareOptions);
   const reportResult = await summarizeChanges(compareResult.reportDir, reportOptions);
   const octokit = getOctokit(githubToken) as unknown as Octokit;
 
@@ -89,6 +91,8 @@ async function runInGitHub(): Promise<void> {
   const excludedDirectories = core.getInput('annotation-exclusions').split(' ');
   const annotator = new Annotator(octokit, compareResult.reportDir, excludedDirectories);
   await annotator.annotate();
+
+  await uploadRunStats(artifactStore);
 
   core.setOutput('report-dir', compareResult.reportDir);
   if (process.env.GITHUB_STEP_SUMMARY) {
