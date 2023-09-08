@@ -2,6 +2,11 @@ name: AppMap Analysis
 
 on:
   workflow_call:
+    inputs:
+      runner-name:
+        required: false
+        type: string
+        default: ubuntu-latest
 
 jobs:
   analyze:
