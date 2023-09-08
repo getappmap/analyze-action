@@ -6,11 +6,16 @@ on:
       archive-count:
         required: true
         type: number
+      runner-name:
+        required: false
+        type: string
+        default: ubuntu-latest
+    
 jobs:
   analyze:
     # If your organization has 4-core runners available, you should change this line to use
     # those runners. 4 cores offers the best performance for AppMap analysis.
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner-name }}
     permissions:
       contents: read
       actions: read
