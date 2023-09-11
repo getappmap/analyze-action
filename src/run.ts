@@ -53,6 +53,8 @@ export async function summarizeChanges(
   options: ReportOptions
 ): Promise<{ reportFile: string }> {
   const reporter = new MarkdownReport(outputDir, options);
+  if (options.includeSections) reporter.includeSections = options.includeSections;
+  if (options.excludeSections) reporter.excludeSections = options.excludeSections;
   const reportFile = join(outputDir, 'report.md');
   await reporter.generateReport();
   assert(existsSync(reportFile), `${reportFile} does not exist`);
