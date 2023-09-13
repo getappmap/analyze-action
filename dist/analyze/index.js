@@ -24402,6 +24402,16 @@ class MarkdownReport {
                 cmd += ` --source-url '${this.options.sourceURL}'`;
             if (this.options.appmapURL)
                 cmd += ` --appmap-url '${this.options.appmapURL}'`;
+            if (this.includeSections) {
+                for (const section of this.includeSections) {
+                    cmd += ` --include-section ${section}`;
+                }
+            }
+            if (this.excludeSections) {
+                for (const section of this.excludeSections) {
+                    cmd += ` --exclude-section ${section}`;
+                }
+            }
             cmd += ` ${this.reportDir}`;
             yield (0, executeCommand_1.executeCommand)(cmd);
         });
@@ -24532,6 +24542,8 @@ function runInGitHub() {
         const sourceDir = core.getInput('source-dir');
         const fetchHistoryDays = parseInt(core.getInput('fetch-history-days') || '30');
         const threadCountStr = core.getInput('thread-count');
+        const includeSectionsStr = core.getInput('include-sections');
+        const excludeSectionsStr = core.getInput('exclude-sections');
         const threadCount = threadCountStr ? parseInt(threadCountStr, 10) : undefined;
         const baseRevision = baseRevisionArg || process.env.GITHUB_BASE_REF;
         if (!baseRevision)
@@ -24572,6 +24584,10 @@ function runInGitHub() {
             sourceURL,
             appmapURL,
         };
+        if (includeSectionsStr)
+            reportOptions.includeSections = includeSectionsStr.split(' ');
+        if (excludeSectionsStr)
+            reportOptions.excludeSections = excludeSectionsStr.split(' ');
         (0, log_1.default)(log_1.LogLevel.Debug, `reportOptions: ${(0, util_1.inspect)(reportOptions)}`);
         const artifactStore = new GitHubArtifactStore_1.GitHubArtifactStore();
         const compareResult = yield (0, run_1.default)(artifactStore, compareOptions);
@@ -24607,6 +24623,8 @@ function runLocally() {
         parser.add_argument('--appmap-url');
         parser.add_argument('--fetch-history-days', { default: '30' });
         parser.add_argument('--thread-count');
+        parser.add_argument('--include-sections');
+        parser.add_argument('--exclude-sections');
         const options = parser.parse_args();
         (0, verbose_1.default)(options.verbose);
         const artifactDir = options.artifact_dir;
@@ -24625,6 +24643,7 @@ function runLocally() {
         };
         if (options.thread_count)
             compareOptions.threadCount = parseInt(options.thread_count, 10);
+        const compareResult = yield (0, run_1.default)(new DirectoryArtifactStore_1.DirectoryArtifactStore(artifactDir), compareOptions);
         const reportOptions = {};
         if (options.appmap_command)
             reportOptions.appmapCommand = options.appmap_command;
@@ -24632,7 +24651,10 @@ function runLocally() {
             reportOptions.sourceURL = new URL(options.source_url);
         if (options.appmap_url)
             reportOptions.appmapURL = new URL(options.appmap_url);
-        const compareResult = yield (0, run_1.default)(new DirectoryArtifactStore_1.DirectoryArtifactStore(artifactDir), compareOptions);
+        if (options.include_sections)
+            reportOptions.includeSections = options.include_sections.split(' ');
+        if (options.exclude_sections)
+            reportOptions.excludeSections = options.exclude_sections.split(' ');
         yield (0, run_1.summarizeChanges)(compareResult.reportDir, reportOptions);
     });
 }
@@ -25009,6 +25031,10 @@ exports["default"] = compare;
 function summarizeChanges(outputDir, options) {
     return __awaiter(this, void 0, void 0, function* () {
         const reporter = new MarkdownReport_1.default(outputDir, options);
+        if (options.includeSections)
+            reporter.includeSections = options.includeSections;
+        if (options.excludeSections)
+            reporter.excludeSections = options.excludeSections;
         const reportFile = (0, path_1.join)(outputDir, 'report.md');
         yield reporter.generateReport();
         (0, assert_1.default)((0, fs_1.existsSync)(reportFile), `${reportFile} does not exist`);

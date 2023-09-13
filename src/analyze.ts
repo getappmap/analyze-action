@@ -26,6 +26,8 @@ async function runInGitHub(): Promise<void> {
   const sourceDir = core.getInput('source-dir');
   const fetchHistoryDays = parseInt(core.getInput('fetch-history-days') || '30');
   const threadCountStr = core.getInput('thread-count');
+  const includeSectionsStr = core.getInput('include-sections');
+  const excludeSectionsStr = core.getInput('exclude-sections');
   const threadCount = threadCountStr ? parseInt(threadCountStr, 10) : undefined;
 
   const baseRevision = baseRevisionArg || process.env.GITHUB_BASE_REF;
@@ -73,10 +75,12 @@ async function runInGitHub(): Promise<void> {
   });
   const appmapURL = new URL(`https://app.land/github_artifact?${appmapURLParams.toString()}`);
 
-  const reportOptions = {
+  const reportOptions: ReportOptions = {
     sourceURL,
     appmapURL,
   };
+  if (includeSectionsStr) reportOptions.includeSections = includeSectionsStr.split(' ');
+  if (excludeSectionsStr) reportOptions.excludeSections = excludeSectionsStr.split(' ');
 
   log(LogLevel.Debug, `reportOptions: ${inspect(reportOptions)}`);
 
@@ -117,6 +121,8 @@ async function runLocally() {
   parser.add_argument('--appmap-url');
   parser.add_argument('--fetch-history-days', { default: '30' });
   parser.add_argument('--thread-count');
+  parser.add_argument('--include-sections');
+  parser.add_argument('--exclude-sections');
 
   const options = parser.parse_args();
 
@@ -137,12 +143,14 @@ async function runLocally() {
   };
   if (options.thread_count) compareOptions.threadCount = parseInt(options.thread_count, 10);
 
+  const compareResult = await compare(new DirectoryArtifactStore(artifactDir), compareOptions);
+
   const reportOptions = {} as ReportOptions;
   if (options.appmap_command) reportOptions.appmapCommand = options.appmap_command;
   if (options.source_url) reportOptions.sourceURL = new URL(options.source_url);
   if (options.appmap_url) reportOptions.appmapURL = new URL(options.appmap_url);
-
-  const compareResult = await compare(new DirectoryArtifactStore(artifactDir), compareOptions);
+  if (options.include_sections) reportOptions.includeSections = options.include_sections.split(' ');
+  if (options.exclude_sections) reportOptions.excludeSections = options.exclude_sections.split(' ');
   await summarizeChanges(compareResult.reportDir, reportOptions);
 }
 

@@ -33,12 +33,18 @@ jobs:
       - name: Test
         run: yarn test
 
-      - name: Save AppMaps
-        uses: actions/cache/save@v3
-        if: always()
+      - name: Archive AppMaps
+        if: github.event_name != 'pull_request'
+        uses: getappmap/archive-action@v1
+
+      - name: Analyze AppMaps
+        uses: ./
+        if: github.event_name == 'pull_request'
         with:
-          path: tmp/appmap
-          key: appmaps-${{ github.sha }}-${{ github.run_attempt }}
+          base-revision: ${{ github.event.pull_request.base.sha }}
+          head-revision: ${{ github.event.pull_request.head.sha }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          include-sections: changed-appmaps
 
       - name: Commit changes
         # If you forgot to package the distribution, you'll see a commit added to your PR
@@ -53,8 +59,3 @@ jobs:
         with:
           tag: v1
           force_push_tag: true
-
-  appmap-analysis:
-    if: always()
-    needs: [test]
-    uses: ./.github/workflows/appmap-analysis.yml
