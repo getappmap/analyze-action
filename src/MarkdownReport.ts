@@ -14,8 +14,8 @@ export default class MarkdownReport {
   async generateReport() {
     let cmd = `${this.appmapCommand} compare-report`;
     if (verbose()) cmd += ' --verbose';
-    if (this.options.sourceURL) cmd += ` --source-url '${this.options.sourceURL}'`;
-    if (this.options.appmapURL) cmd += ` --appmap-url '${this.options.appmapURL}'`;
+    if (this.options.sourceURL) cmd += ` --source-url ${this.options.sourceURL}`;
+    if (this.options.appmapURL) cmd += ` --appmap-url ${this.options.appmapURL}`;
     if (this.includeSections) {
       for (const section of this.includeSections) {
         cmd += ` --include-section ${section}`;
