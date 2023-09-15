@@ -1,6 +1,5 @@
 import assert from 'assert';
-import { Command, executeCommand } from './executeCommand';
-import verbose from './verbose';
+import { Command, executeCommand, verbose } from '@appland/action-utils';
 
 export default class Restore {
   public repository?: string;

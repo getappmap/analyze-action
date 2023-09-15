@@ -1,8 +1,7 @@
 import { join } from 'path';
+import { log, LogLevel, executeCommand, verbose } from '@appland/action-utils';
+
 import ArtifactStore from './ArtifactStore';
-import { executeCommand } from './executeCommand';
-import log, { LogLevel } from './log';
-import verbose from './verbose';
 
 export default class Compare {
   public appmapCommand = 'appmap';

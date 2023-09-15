@@ -1,8 +1,7 @@
 import * as core from '@actions/core';
 import { ArgumentParser } from 'argparse';
+import { log, LogLevel, ActionLogger, setLogger, verbose } from '@appland/action-utils';
 
-import log, { ActionLogger, LogLevel, setLogger } from './log';
-import verbose from './verbose';
 import assert from 'assert';
 import { DirectoryArtifactStore } from './DirectoryArtifactStore';
 import compare, { summarizeChanges } from './run';

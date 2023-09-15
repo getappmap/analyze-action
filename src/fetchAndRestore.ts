@@ -1,6 +1,7 @@
+import { log, LogLevel } from '@appland/action-utils';
+
 import Restore from './Restore';
 import { fetchAllHistory, fetchInitialHistory } from './gitFetch';
-import log, { LogLevel } from './log';
 
 export default async function fetchAndRestore(restorer: Restore, sinceDays: number) {
   if (sinceDays > 0) {

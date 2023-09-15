@@ -1,8 +1,9 @@
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { chdir } from 'node:process';
+import * as actionUtils from '@appland/action-utils';
+
 import uploadRunStats from '../../src/uploadRunStats';
-import * as logModule from '../../src/log';
 import type ArtifactStore from '../../src/ArtifactStore';
 import { tmpdir } from 'node:os';
 
@@ -17,7 +18,7 @@ describe('uploadRunStats', () => {
   beforeEach(async () => {
     tmpDir = await mkdtemp(join(tmpdir(), 'upload-run-stats-test-'));
     chdir(tmpDir);
-    log = jest.spyOn(logModule, 'default');
+    log = jest.spyOn(actionUtils, 'log');
   });
 
   afterEach(async () => {
@@ -37,7 +38,7 @@ describe('uploadRunStats', () => {
   it('logs a warning if `.appmap/run-stats` does not exist', async () => {
     await expect(uploadRunStats(artifactStore)).resolves.toBeUndefined();
     expect(log).toHaveBeenCalledWith(
-      logModule.LogLevel.Warn,
+      actionUtils.LogLevel.Warn,
       'The run stats directory (.appmap/run-stats) was not found'
     );
     expect(artifactStore.uploadArtifact).not.toHaveBeenCalled();
@@ -47,7 +48,7 @@ describe('uploadRunStats', () => {
     await createRunStatsDir();
     await expect(uploadRunStats(artifactStore)).resolves.toBeUndefined();
     expect(log).toHaveBeenCalledWith(
-      logModule.LogLevel.Warn,
+      actionUtils.LogLevel.Warn,
       'No run stats files found, skipping upload'
     );
     expect(artifactStore.uploadArtifact).not.toHaveBeenCalled();

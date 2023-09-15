@@ -1,6 +1,7 @@
 import { ArgumentParser } from 'argparse';
+import { verbose } from '@appland/action-utils';
+
 import { summarizeChanges } from './run';
-import verbose from './verbose';
 import ReportOptions from './ReportOptions';
 
 async function main() {

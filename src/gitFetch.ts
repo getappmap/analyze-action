@@ -1,4 +1,5 @@
-import { ExecuteOptions, executeCommand } from './executeCommand';
+import { executeCommand } from '@appland/action-utils';
+
 import now from './now';
 
 export async function fetchInitialHistory(sinceDays: number) {
@@ -13,8 +14,6 @@ export async function fetchInitialHistory(sinceDays: number) {
 
 // If that fails, get all the history
 export async function fetchAllHistory() {
-  const executeOptions = new ExecuteOptions();
   // 128: fatal: --unshallow on a complete repository does not make sense
-  executeOptions.allowedCodes = [0, 128];
-  await executeCommand(`git fetch --unshallow`, executeOptions);
+  await executeCommand(`git fetch --unshallow`, { allowedCodes: [0, 128] });
 }

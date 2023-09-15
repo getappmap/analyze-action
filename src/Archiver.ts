@@ -1,9 +1,8 @@
 import { existsSync } from 'fs';
 import { basename, dirname, join } from 'path';
+import { log, LogLevel, executeCommand, verbose } from '@appland/action-utils';
+
 import ArtifactStore from './ArtifactStore';
-import { ExecuteOptions, executeCommand } from './executeCommand';
-import log, { LogLevel } from './log';
-import verbose from './verbose';
 
 export interface ArchiveDetector {
   findExistingArchives(revision: string): string[];
@@ -46,10 +45,7 @@ export default class Archiver {
     let archiveCommand = `${this.appmapCommand} archive --revision ${this.revision}`;
     if (verbose()) archiveCommand += ' --verbose';
     if (this.threadCount) archiveCommand += ` --thread-count ${this.threadCount}`;
-    const options = new ExecuteOptions();
-    options.printStderr = true;
-    options.printStdout = true;
-    await executeCommand(archiveCommand, options);
+    await executeCommand(archiveCommand);
 
     const archiveFiles = this.archiveDetector.findExistingArchives(this.revision);
     if (archiveFiles.length === 0) {

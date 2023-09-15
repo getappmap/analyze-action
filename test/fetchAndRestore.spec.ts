@@ -1,8 +1,9 @@
+import { verbose } from '@appland/action-utils';
+import * as actionUtils from '@appland/action-utils';
+
 import fetchAndRestore from '../src/fetchAndRestore';
-import * as executeCommand from '../src/executeCommand';
 import * as now from '../src/now';
 import Restore from '../src/Restore';
-import verbose from '../src/verbose';
 
 if (process.env.VERBOSE) verbose(true);
 
@@ -18,7 +19,7 @@ describe('analyze', () => {
     jest.spyOn(restorer, 'validate').mockReturnValue(undefined);
     restoreFn = jest.spyOn(restorer, 'restore');
     restoreFn.mockResolvedValue(undefined);
-    executeCommandFn = jest.spyOn(executeCommand, 'executeCommand');
+    executeCommandFn = jest.spyOn(actionUtils, 'executeCommand');
   });
 
   afterEach(async () => {
@@ -52,9 +53,6 @@ describe('analyze', () => {
       expect(executeCommandFn).toHaveBeenCalledWith('git fetch --shallow-since 2022-07-24');
       expect(executeCommandFn).toHaveBeenCalledWith('git fetch --unshallow', {
         allowedCodes: [0, 128],
-        printCommand: false,
-        printStderr: false,
-        printStdout: false,
       });
     });
   });

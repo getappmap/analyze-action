@@ -1,6 +1,6 @@
+import { executeCommand, verbose } from '@appland/action-utils';
+
 import ReportOptions from './ReportOptions';
-import { executeCommand } from './executeCommand';
-import verbose from './verbose';
 
 export default class MarkdownReport {
   public appmapCommand = 'appmap';

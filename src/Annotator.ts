@@ -1,12 +1,12 @@
-import { context, getOctokit } from '@actions/github';
+import { context } from '@actions/github';
 import { Octokit } from '@octokit/rest';
 import { readFileSync } from 'fs';
 import path from 'path';
+import { log, LogLevel } from '@appland/action-utils';
 
 import { Annotation } from './Annotation';
 import { ChangeReport, TestFailure } from './ChangeReport';
 import { Finding } from './Finding';
-import log, { LogLevel } from './log';
 import { batch } from './util';
 
 enum AnnotationLevel {
@@ -201,7 +201,7 @@ export default class Annotator {
 
   private deduplicateFindings(findings: Finding[]): Finding[] {
     const uniqueFindings = {} as Record<string, Finding>;
-    findings.forEach((finding) => uniqueFindings[finding.hash_v2] = finding);
+    findings.forEach((finding) => (uniqueFindings[finding.hash_v2] = finding));
     return Object.values(uniqueFindings);
   }
 

@@ -35,10 +35,11 @@
     "@actions/artifact": "^1.1.1",
     "@actions/core": "^1.10.0",
     "@actions/github": "^5.1.1",
+    "@appland/action-utils": "https://github.com/getappmap/action-utils#feat/initial-release",
     "argparse": "^2.0.1",
     "handlebars": "^4.7.7"
   },
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=18.0.0"
   }
 }
