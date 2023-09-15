@@ -25592,9 +25592,9 @@ class MarkdownReport {
             if ((0, action_utils_1.verbose)())
                 cmd += ' --verbose';
             if (this.options.sourceURL)
-                cmd += ` --source-url '${this.options.sourceURL}'`;
+                cmd += ` --source-url ${this.options.sourceURL}`;
             if (this.options.appmapURL)
-                cmd += ` --appmap-url '${this.options.appmapURL}'`;
+                cmd += ` --appmap-url ${this.options.appmapURL}`;
             if (this.includeSections) {
                 for (const section of this.includeSections) {
                     cmd += ` --include-section ${section}`;
@@ -25727,7 +25727,7 @@ const uploadRunStats_1 = __importDefault(__nccwpck_require__(7443));
 function runInGitHub() {
     return __awaiter(this, void 0, void 0, function* () {
         (0, action_utils_1.verbose)(core.getInput('verbose'));
-        (0, action_utils_1.setLogger)(new action_utils_1.ActionLogger());
+        // setLogger(new ActionLogger());
         const baseRevisionArg = core.getInput('base-revision');
         const headRevisionArg = core.getInput('head-revision');
         const sourceDir = core.getInput('source-dir');
