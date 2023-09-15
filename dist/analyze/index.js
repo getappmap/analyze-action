@@ -25453,7 +25453,7 @@ class Compare {
             const dir = process.cwd();
             process.chdir(reportDir);
             try {
-                yield (0, action_utils_1.executeCommand)(`tar -czf ${reportFile} *`);
+                yield (0, action_utils_1.executeCommand)({ cmd: `tar -czf ${reportFile} *`, options: { shell: '/bin/bash' } });
             }
             finally {
                 process.chdir(dir);

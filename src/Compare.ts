@@ -34,7 +34,7 @@ export default class Compare {
     const dir = process.cwd();
     process.chdir(reportDir);
     try {
-      await executeCommand(`tar -czf ${reportFile} *`);
+      await executeCommand({ cmd: `tar -czf ${reportFile} *`, options: { shell: '/bin/bash' } });
     } finally {
       process.chdir(dir);
     }
