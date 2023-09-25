@@ -1,8 +1,7 @@
 import { join } from 'path';
+import { log, LogLevel, executeCommand, verbose } from '@appland/action-utils';
+
 import ArtifactStore from './ArtifactStore';
-import { executeCommand } from './executeCommand';
-import log, { LogLevel } from './log';
-import verbose from './verbose';
 
 export default class Compare {
   public appmapCommand = 'appmap';
@@ -35,7 +34,7 @@ export default class Compare {
     const dir = process.cwd();
     process.chdir(reportDir);
     try {
-      await executeCommand(`tar -czf ${reportFile} *`);
+      await executeCommand({ cmd: `tar -czf ${reportFile} *`, options: { shell: '/bin/bash' } });
     } finally {
       process.chdir(dir);
     }

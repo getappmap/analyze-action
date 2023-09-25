@@ -1,7 +1,8 @@
+import { verbose } from '@appland/action-utils';
+import * as actionUtils from '@appland/action-utils';
+
 import Archiver, { ArchiveDetector } from '../src/Archiver';
 import ArtifactStore from '../src/ArtifactStore';
-import verbose from '../src/verbose';
-import * as executeCommand from '../src/executeCommand';
 
 if (process.env.VERBOSE) verbose(true);
 
@@ -28,7 +29,7 @@ describe('archive', () => {
     findExistingArchives.mockReturnValueOnce([]);
     findExistingArchives.mockReturnValueOnce(['.appmap/archive/full/the-revision.tar']);
 
-    jest.spyOn(executeCommand, 'executeCommand').mockResolvedValue('');
+    jest.spyOn(actionUtils, 'executeCommand').mockResolvedValue('');
 
     const uploadArtifact = jest.fn();
     const artifactStore = {
@@ -44,10 +45,9 @@ describe('archive', () => {
 
     expect(findExistingArchives).toBeCalledTimes(2);
 
-    expect(executeCommand.executeCommand).toHaveBeenCalledTimes(1);
-    expect(executeCommand.executeCommand).toHaveBeenCalledWith(
-      'appmap archive --revision the-revision --thread-count 2',
-      { allowedCodes: [0], printCommand: false, printStderr: true, printStdout: true }
+    expect(actionUtils.executeCommand).toHaveBeenCalledTimes(1);
+    expect(actionUtils.executeCommand).toHaveBeenCalledWith(
+      'appmap archive --revision the-revision --thread-count 2'
     );
 
     expect(uploadArtifact).toBeCalledTimes(1);

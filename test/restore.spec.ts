@@ -1,9 +1,9 @@
-import Restore from '../src/Restore';
-
 import { cp, rm } from 'fs/promises';
 import { join } from 'path';
 import { glob } from 'glob';
-import verbose from '../src/verbose';
+
+import Restore from '../src/Restore';
+import { verbose } from '@appland/action-utils';
 
 const pwd = process.cwd();
 const fixtureDir = join(__dirname, 'fixture');

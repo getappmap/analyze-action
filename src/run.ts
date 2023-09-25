@@ -1,14 +1,15 @@
-import Compare from './Compare';
-import Restore from './Restore';
-import { executeCommand } from './executeCommand';
 import { mkdir } from 'fs/promises';
 import { join } from 'path';
+import { existsSync } from 'fs';
+import assert from 'assert';
+import { executeCommand } from '@appland/action-utils';
+
+import Compare from './Compare';
+import Restore from './Restore';
 import Archiver from './Archiver';
 import ArtifactStore from './ArtifactStore';
 import CompareOptions from './CompareOptions';
-import { existsSync } from 'fs';
 import MarkdownReport from './MarkdownReport';
-import assert from 'assert';
 import ReportOptions from './ReportOptions';
 import fetchAndRestore from './fetchAndRestore';
 
