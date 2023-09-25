@@ -25727,7 +25727,7 @@ const uploadRunStats_1 = __importDefault(__nccwpck_require__(7443));
 function runInGitHub() {
     return __awaiter(this, void 0, void 0, function* () {
         (0, action_utils_1.verbose)(core.getInput('verbose'));
-        // setLogger(new ActionLogger());
+        (0, action_utils_1.setLogger)(new action_utils_1.ActionLogger());
         const baseRevisionArg = core.getInput('base-revision');
         const headRevisionArg = core.getInput('head-revision');
         const sourceDir = core.getInput('source-dir');

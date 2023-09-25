@@ -18,7 +18,7 @@ import uploadRunStats from './uploadRunStats';
 
 async function runInGitHub(): Promise<void> {
   verbose(core.getInput('verbose'));
-  // setLogger(new ActionLogger());
+  setLogger(new ActionLogger());
 
   const baseRevisionArg = core.getInput('base-revision');
   const headRevisionArg = core.getInput('head-revision');
