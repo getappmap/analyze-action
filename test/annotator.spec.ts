@@ -4,10 +4,11 @@ import path from 'path';
 import sinon, { SinonSandbox, SinonSpy } from 'sinon';
 import * as github from '@actions/github';
 
-import Annotator from '../../src/Annotator';
-import { dataDir } from '../util';
-import { Finding } from '../../src/Finding';
+import Annotator from '../src/Annotator';
+import { Finding } from '../src/Finding';
 import { Octokit } from '@octokit/rest';
+
+export const dataDir = path.join(__dirname, 'fixture', 'annotator');
 
 const mockSha = 'fakeShaValue';
 const mockOwner = 'fakeOwnerValue';
@@ -177,7 +178,10 @@ describe('Annotator', () => {
 
       it('when all locations are in excluded directories', () => {
         const mockFinding = {
-          stack: ['/home/fakeUser/fakeDir/node_modules/someFile.txt:10', 'vendor/app/testFile.rb:123'],
+          stack: [
+            '/home/fakeUser/fakeDir/node_modules/someFile.txt:10',
+            'vendor/app/testFile.rb:123',
+          ],
         } as Finding;
 
         const result = annotator.annotationFromFinding(mockFinding);
@@ -208,7 +212,6 @@ describe('Annotator', () => {
         const result = annotator.annotationFromFinding(mockFinding);
         assert.deepEqual(result, expectedAnnotation);
       });
-
 
       it('when the first location is desired', () => {
         const mockFinding = {
@@ -260,7 +263,10 @@ describe('Annotator', () => {
 
       it('when all locations are in excluded directories', () => {
         const mockFinding = {
-          stack: ['C:\\Users\\Fake Directory\\node_modules\\someFile.txt:10', 'vendor\\app\\testFile.rb:123'],
+          stack: [
+            'C:\\Users\\Fake Directory\\node_modules\\someFile.txt:10',
+            'vendor\\app\\testFile.rb:123',
+          ],
         } as Finding;
 
         const result = annotator.annotationFromFinding(mockFinding);

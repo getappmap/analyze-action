@@ -1,19 +1,18 @@
 import * as core from '@actions/core';
 import { ArgumentParser } from 'argparse';
-import { log, LogLevel, ActionLogger, setLogger, verbose } from '@appland/action-utils';
-
+import { log, LogLevel, ActionLogger, setLogger, verbose, Commenter } from '@appland/action-utils';
+import { getOctokit } from '@actions/github';
+import { Octokit } from '@octokit/rest';
 import assert from 'assert';
+import { cp } from 'fs/promises';
+import { inspect } from 'util';
+
 import { DirectoryArtifactStore } from './DirectoryArtifactStore';
 import compare, { summarizeChanges } from './run';
 import { GitHubArtifactStore } from './GitHubArtifactStore';
-import { cp } from 'fs/promises';
-import { inspect } from 'util';
 import ReportOptions from './ReportOptions';
 import CompareOptions from './CompareOptions';
-import Commenter from './Commenter';
 import Annotator from './Annotator';
-import { getOctokit } from '@actions/github';
-import { Octokit } from '@octokit/rest';
 import uploadRunStats from './uploadRunStats';
 
 async function runInGitHub(): Promise<void> {
@@ -88,7 +87,7 @@ async function runInGitHub(): Promise<void> {
   const reportResult = await summarizeChanges(compareResult.reportDir, reportOptions);
   const octokit = getOctokit(githubToken) as unknown as Octokit;
 
-  const commenter = new Commenter(octokit, reportResult.reportFile);
+  const commenter = new Commenter(octokit, 'appmap', reportResult.reportFile);
   await commenter.comment();
 
   const excludedDirectories = core.getInput('annotation-exclusions').split(' ');

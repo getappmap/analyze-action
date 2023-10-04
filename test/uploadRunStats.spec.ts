@@ -1,11 +1,11 @@
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { chdir } from 'node:process';
 import * as actionUtils from '@appland/action-utils';
 
-import uploadRunStats from '../../src/uploadRunStats';
-import type ArtifactStore from '../../src/ArtifactStore';
-import { tmpdir } from 'node:os';
+import uploadRunStats from '../src/uploadRunStats';
+import type ArtifactStore from '../src/ArtifactStore';
 
 describe('uploadRunStats', () => {
   let tmpDir: string;
