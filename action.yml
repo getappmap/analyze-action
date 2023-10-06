@@ -8,11 +8,11 @@ inputs:
   base-revision:
     description: |
       The base revision to compare against. The default is the GITHUB_BASE_REF, which
-      according to GitHub is the name of the base ref or target branch of the pull request in a workflow run.
+      is the name of the base ref or target branch of the pull request in a workflow run.
   head-revision:
     description: |
-      The head revision to compare against. The default is the GITHUB_SHA, which
-      according to GitHub is the commit that triggered the workflow run.
+      The head revision to compare against. The default is the GITHUB_HEAD_REF, which
+      is the name of the head ref or target branch of the pull request in a workflow run.
   github-token:
     description: |
       The GitHub token to use with the GitHub API to pull AppMap archives from build artifacts.
