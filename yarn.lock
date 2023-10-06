@@ -95,9 +95,9 @@
     call-me-maybe "^1.0.1"
     z-schema "^5.0.1"
 
-"@appland/action-utils@https://github.com/getappmap/action-utils#19e6956b6b078a95154d0ba3fea2c762060b0b45":
+"@appland/action-utils@https://github.com/getappmap/action-utils":
   version "1.1.0"
-  resolved "https://github.com/getappmap/action-utils#19e6956b6b078a95154d0ba3fea2c762060b0b45"
+  resolved "https://github.com/getappmap/action-utils#dfa79ebb3361641ffa263752047bcdcc69ee6a94"
   dependencies:
     "@actions/core" "^1.10.1"
     "@actions/github" "^5.1.1"
