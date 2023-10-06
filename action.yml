@@ -17,6 +17,7 @@ inputs:
     description: |
       The GitHub token to use with the GitHub API to pull AppMap archives from build artifacts.
       Most commonly, you'll use `secrets.GITHUB_TOKEN`, which is automatically provided by GitHub.
+    default: ${{ github.token }}
   fetch-history-days:
     description: |
       The number of days of history to fetch in order to find the most recent ancestor that has
