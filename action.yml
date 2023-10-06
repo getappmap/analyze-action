@@ -20,8 +20,9 @@ inputs:
   fetch-history-days:
     description: |
       The number of days of history to fetch in order to find the most recent ancestor that has
-      an AppMap archive. The default is 30 days. If an archive is not found, within this time window,
+      an AppMap archive. If an archive is not found, within this time window,
       the entire history will be fetched. To disable history fetching completely, set this value to 0.
+    default: '30'
   thread-count:
     description:
       Number of worker threads to use for processing the archive. Defaults to the number of CPUs /
