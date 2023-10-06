@@ -22,10 +22,13 @@ async function runInGitHub(): Promise<void> {
   const baseRevisionArg = core.getInput('base-revision');
   const headRevisionArg = core.getInput('head-revision');
   const sourceDir = core.getInput('source-dir');
-  const fetchHistoryDays = parseInt(core.getInput('fetch-history-days') || '30');
   const threadCountStr = core.getInput('thread-count');
   const includeSectionsStr = core.getInput('include-sections');
   const excludeSectionsStr = core.getInput('exclude-sections');
+  // Defaults for fetchHistoryDays and retentionDays should not technically be needed, since
+  // default values are set in the action.yml file. These defaults are just here for extra safety.
+  const fetchHistoryDays = parseInt(core.getInput('fetch-history-days') || '30', 10);
+  const retentionDays = parseInt(core.getInput('retention-days') || '7', 10);
   const threadCount = threadCountStr ? parseInt(threadCountStr, 10) : undefined;
 
   const baseRevision = baseRevisionArg || process.env.GITHUB_BASE_REF;
@@ -57,6 +60,7 @@ async function runInGitHub(): Promise<void> {
     githubRepo,
     githubToken,
     fetchHistoryDays,
+    retentionDays,
     threadCount,
   };
   log(LogLevel.Debug, `compareOptions: ${inspect(compareOptions)}`);
@@ -94,7 +98,7 @@ async function runInGitHub(): Promise<void> {
   const annotator = new Annotator(octokit, compareResult.reportDir, excludedDirectories);
   await annotator.annotate();
 
-  await uploadRunStats(artifactStore);
+  await uploadRunStats(artifactStore, retentionDays);
 
   core.setOutput('report-dir', compareResult.reportDir);
   if (process.env.GITHUB_STEP_SUMMARY) {
@@ -117,6 +121,7 @@ async function runLocally() {
   parser.add_argument('--artifact-dir', { default: '.appmap/artifacts' });
   parser.add_argument('--source-url');
   parser.add_argument('--appmap-url');
+  parser.add_argument('--retention-days', { default: '7' });
   parser.add_argument('--fetch-history-days', { default: '30' });
   parser.add_argument('--thread-count');
   parser.add_argument('--include-sections');
@@ -137,7 +142,8 @@ async function runLocally() {
     sourceDir: options.source_dir,
     githubToken: options.github_token || process.env.GITHUB_TOKEN,
     githubRepo: options.github_repo,
-    fetchHistoryDays: parseInt(options.fetch_history_days),
+    retentionDays: parseInt(options.retention_days, 10),
+    fetchHistoryDays: parseInt(options.fetch_history_days, 10),
   };
   if (options.thread_count) compareOptions.threadCount = parseInt(options.thread_count, 10);
 

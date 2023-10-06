@@ -11,7 +11,8 @@ export default class Compare {
   constructor(
     public artifactStore: ArtifactStore,
     public baseRevision: string,
-    public headRevision: string
+    public headRevision: string,
+    public retentionDays: number
   ) {}
 
   async compare(): Promise<{ reportDir: string }> {
@@ -40,7 +41,11 @@ export default class Compare {
     }
 
     log(LogLevel.Info, `Storing comparison report ${reportFile}`);
-    await this.artifactStore.uploadArtifact(reportFile, [join(reportDir, reportFile)]);
+    await this.artifactStore.uploadArtifact(
+      reportFile,
+      [join(reportDir, reportFile)],
+      this.retentionDays
+    );
 
     return { reportDir };
   }

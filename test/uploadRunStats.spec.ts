@@ -36,7 +36,7 @@ describe('uploadRunStats', () => {
   };
 
   it('logs a warning if `.appmap/run-stats` does not exist', async () => {
-    await expect(uploadRunStats(artifactStore)).resolves.toBeUndefined();
+    await expect(uploadRunStats(artifactStore, 7)).resolves.toBeUndefined();
     expect(log).toHaveBeenCalledWith(
       actionUtils.LogLevel.Warn,
       'The run stats directory (.appmap/run-stats) was not found'
@@ -46,7 +46,7 @@ describe('uploadRunStats', () => {
 
   it('does not upload any artifact if `.appmap/run-stats` is empty', async () => {
     await createRunStatsDir();
-    await expect(uploadRunStats(artifactStore)).resolves.toBeUndefined();
+    await expect(uploadRunStats(artifactStore, 7)).resolves.toBeUndefined();
     expect(log).toHaveBeenCalledWith(
       actionUtils.LogLevel.Warn,
       'No run stats files found, skipping upload'
@@ -60,10 +60,11 @@ describe('uploadRunStats', () => {
     const files = await Promise.all(
       Array.from({ length: numFiles }).map(() => createRunStatsFile('{"foo": "bar"}'))
     );
-    await expect(uploadRunStats(artifactStore)).resolves.toBeUndefined();
+    await expect(uploadRunStats(artifactStore, 7)).resolves.toBeUndefined();
     expect(artifactStore.uploadArtifact).toHaveBeenCalledWith(
       'appmap-run-stats',
-      files.sort().slice(-1)
+      files.sort().slice(-1),
+      7
     );
   });
 
@@ -71,7 +72,7 @@ describe('uploadRunStats', () => {
     await createRunStatsDir();
     const file = await createRunStatsFile('{"foo": "bar"}');
     await createRunStatsFile('{"foo": "bar"}', '.txt');
-    await expect(uploadRunStats(artifactStore)).resolves.toBeUndefined();
-    expect(artifactStore.uploadArtifact).toHaveBeenCalledWith('appmap-run-stats', [file]);
+    await expect(uploadRunStats(artifactStore, 7)).resolves.toBeUndefined();
+    expect(artifactStore.uploadArtifact).toHaveBeenCalledWith('appmap-run-stats', [file], 7);
   });
 });

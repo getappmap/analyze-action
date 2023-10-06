@@ -38351,9 +38351,10 @@ class FileArchiveDetector {
     }
 }
 class Archiver {
-    constructor(artifactStore, revision) {
+    constructor(artifactStore, revision, retentionDays) {
         this.artifactStore = artifactStore;
         this.revision = revision;
+        this.retentionDays = retentionDays;
         this.appmapCommand = 'appmap';
         this.archiveBranch = 'appmap-archive';
         this.archiveDetector = new FileArchiveDetector();
@@ -38390,7 +38391,7 @@ class Archiver {
             const artifactPrefix = dir.replace(/\//g, '-').replace(/\./g, '');
             const [sha] = (0, path_1.basename)(archiveFile).split('.');
             const artifactName = `${artifactPrefix}_${sha}.tar`;
-            yield this.artifactStore.uploadArtifact(artifactName, [archiveFile]);
+            yield this.artifactStore.uploadArtifact(artifactName, [archiveFile], this.retentionDays);
             return { archiveFile };
         });
     }
@@ -38427,10 +38428,11 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 const path_1 = __nccwpck_require__(1017);
 const action_utils_1 = __nccwpck_require__(1980);
 class Compare {
-    constructor(artifactStore, baseRevision, headRevision) {
+    constructor(artifactStore, baseRevision, headRevision, retentionDays) {
         this.artifactStore = artifactStore;
         this.baseRevision = baseRevision;
         this.headRevision = headRevision;
+        this.retentionDays = retentionDays;
         this.appmapCommand = 'appmap';
     }
     compare() {
@@ -38456,7 +38458,7 @@ class Compare {
                 process.chdir(dir);
             }
             (0, action_utils_1.log)(action_utils_1.LogLevel.Info, `Storing comparison report ${reportFile}`);
-            yield this.artifactStore.uploadArtifact(reportFile, [(0, path_1.join)(reportDir, reportFile)]);
+            yield this.artifactStore.uploadArtifact(reportFile, [(0, path_1.join)(reportDir, reportFile)], this.retentionDays);
             return { reportDir };
         });
     }
@@ -38489,7 +38491,10 @@ class DirectoryArtifactStore {
     constructor(directory) {
         this.directory = directory;
     }
-    uploadArtifact(name, files) {
+    /**
+     * @param _retentionDays Ignored by this implementation.
+     */
+    uploadArtifact(name, files, _retentionDays) {
         return __awaiter(this, void 0, void 0, function* () {
             yield (0, promises_1.mkdir)(this.directory, { recursive: true });
             (0, action_utils_1.log)(action_utils_1.LogLevel.Info, `Storing artifact ${name} in ${this.directory}`);
@@ -38547,10 +38552,10 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GitHubArtifactStore = void 0;
 const artifact = __importStar(__nccwpck_require__(2605));
 class GitHubArtifactStore {
-    uploadArtifact(name, files) {
+    uploadArtifact(name, files, retentionDays) {
         return __awaiter(this, void 0, void 0, function* () {
             const artifactClient = artifact.create();
-            yield artifactClient.uploadArtifact(name, files, process.cwd());
+            yield artifactClient.uploadArtifact(name, files, process.cwd(), { retentionDays });
         });
     }
 }
@@ -38727,10 +38732,13 @@ function runInGitHub() {
         const baseRevisionArg = core.getInput('base-revision');
         const headRevisionArg = core.getInput('head-revision');
         const sourceDir = core.getInput('source-dir');
-        const fetchHistoryDays = parseInt(core.getInput('fetch-history-days') || '30');
         const threadCountStr = core.getInput('thread-count');
         const includeSectionsStr = core.getInput('include-sections');
         const excludeSectionsStr = core.getInput('exclude-sections');
+        // Defaults for fetchHistoryDays and retentionDays should not technically be needed, since
+        // default values are set in the action.yml file. These defaults are just here for extra safety.
+        const fetchHistoryDays = parseInt(core.getInput('fetch-history-days') || '30', 10);
+        const retentionDays = parseInt(core.getInput('retention-days') || '7', 10);
         const threadCount = threadCountStr ? parseInt(threadCountStr, 10) : undefined;
         const baseRevision = baseRevisionArg || process.env.GITHUB_BASE_REF;
         if (!baseRevision)
@@ -38753,6 +38761,7 @@ function runInGitHub() {
             githubRepo,
             githubToken,
             fetchHistoryDays,
+            retentionDays,
             threadCount,
         };
         (0, action_utils_1.log)(action_utils_1.LogLevel.Debug, `compareOptions: ${(0, util_1.inspect)(compareOptions)}`);
@@ -38785,7 +38794,7 @@ function runInGitHub() {
         const excludedDirectories = core.getInput('annotation-exclusions').split(' ');
         const annotator = new Annotator_1.default(octokit, compareResult.reportDir, excludedDirectories);
         yield annotator.annotate();
-        yield (0, uploadRunStats_1.default)(artifactStore);
+        yield (0, uploadRunStats_1.default)(artifactStore, retentionDays);
         core.setOutput('report-dir', compareResult.reportDir);
         if (process.env.GITHUB_STEP_SUMMARY) {
             yield (0, promises_1.cp)(reportResult.reportFile, process.env.GITHUB_STEP_SUMMARY);
@@ -38808,6 +38817,7 @@ function runLocally() {
         parser.add_argument('--artifact-dir', { default: '.appmap/artifacts' });
         parser.add_argument('--source-url');
         parser.add_argument('--appmap-url');
+        parser.add_argument('--retention-days', { default: '7' });
         parser.add_argument('--fetch-history-days', { default: '30' });
         parser.add_argument('--thread-count');
         parser.add_argument('--include-sections');
@@ -38826,7 +38836,8 @@ function runLocally() {
             sourceDir: options.source_dir,
             githubToken: options.github_token || process.env.GITHUB_TOKEN,
             githubRepo: options.github_repo,
-            fetchHistoryDays: parseInt(options.fetch_history_days),
+            retentionDays: parseInt(options.retention_days, 10),
+            fetchHistoryDays: parseInt(options.fetch_history_days, 10),
         };
         if (options.thread_count)
             compareOptions.threadCount = parseInt(options.thread_count, 10);
@@ -38998,7 +39009,7 @@ function compare(artifactStore, options) {
         if ((0, fs_1.existsSync)(outputDir))
             throw new Error(`Output directory ${outputDir} already exists. Please remove it and try again.`);
         yield (0, promises_1.mkdir)(outputDir, { recursive: true });
-        const archiver = new Archiver_1.default(artifactStore, headRevision);
+        const archiver = new Archiver_1.default(artifactStore, headRevision, options.retentionDays);
         if (options.appmapCommand)
             archiver.appmapCommand = options.appmapCommand;
         if (options.threadCount)
@@ -39015,7 +39026,7 @@ function compare(artifactStore, options) {
             restorer.repository = options.githubRepo;
         restorer.validate();
         yield (0, fetchAndRestore_1.default)(restorer, options.fetchHistoryDays);
-        const comparer = new Compare_1.default(artifactStore, baseRevision, headRevision);
+        const comparer = new Compare_1.default(artifactStore, baseRevision, headRevision, options.retentionDays);
         comparer.outputDir = outputDir;
         if (options.appmapCommand)
             comparer.appmapCommand = options.appmapCommand;
@@ -39062,7 +39073,7 @@ const promises_1 = __nccwpck_require__(3977);
 const action_utils_1 = __nccwpck_require__(1980);
 const node_path_1 = __nccwpck_require__(9411);
 const RunStatsDirectory = (0, node_path_1.join)('.appmap', 'run-stats');
-function uploadRunStats(store) {
+function uploadRunStats(store, retentionDays) {
     return __awaiter(this, void 0, void 0, function* () {
         (0, action_utils_1.log)(action_utils_1.LogLevel.Info, 'Building the run stats artifact');
         try {
@@ -39087,7 +39098,7 @@ function uploadRunStats(store) {
             return;
         }
         try {
-            yield store.uploadArtifact('appmap-run-stats', statsFiles.slice(-1));
+            yield store.uploadArtifact('appmap-run-stats', statsFiles.slice(-1), retentionDays);
             console.info(`Success! Run stats have been uploaded.`);
         }
         catch (e) {
