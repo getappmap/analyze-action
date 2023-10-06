@@ -39,11 +39,10 @@ jobs:
 
       - name: Analyze AppMaps
         uses: ./
-        if: github.event_name == 'pull_request'
+        if: (success() || failure()) && github.event_name == 'pull_request'
         with:
           base-revision: ${{ github.event.pull_request.base.sha }}
           head-revision: ${{ github.event.pull_request.head.sha }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           include-sections: changed-appmaps
 
       - name: Commit changes

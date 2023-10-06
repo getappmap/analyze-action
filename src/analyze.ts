@@ -1,19 +1,18 @@
 import * as core from '@actions/core';
 import { ArgumentParser } from 'argparse';
-import { log, LogLevel, ActionLogger, setLogger, verbose } from '@appland/action-utils';
-
+import { log, LogLevel, ActionLogger, setLogger, verbose, Commenter } from '@appland/action-utils';
+import { getOctokit } from '@actions/github';
+import { Octokit } from '@octokit/rest';
 import assert from 'assert';
+import { cp } from 'fs/promises';
+import { inspect } from 'util';
+
 import { DirectoryArtifactStore } from './DirectoryArtifactStore';
 import compare, { summarizeChanges } from './run';
 import { GitHubArtifactStore } from './GitHubArtifactStore';
-import { cp } from 'fs/promises';
-import { inspect } from 'util';
 import ReportOptions from './ReportOptions';
 import CompareOptions from './CompareOptions';
-import Commenter from './Commenter';
 import Annotator from './Annotator';
-import { getOctokit } from '@actions/github';
-import { Octokit } from '@octokit/rest';
 import uploadRunStats from './uploadRunStats';
 
 async function runInGitHub(): Promise<void> {
@@ -23,10 +22,13 @@ async function runInGitHub(): Promise<void> {
   const baseRevisionArg = core.getInput('base-revision');
   const headRevisionArg = core.getInput('head-revision');
   const sourceDir = core.getInput('source-dir');
-  const fetchHistoryDays = parseInt(core.getInput('fetch-history-days') || '30');
   const threadCountStr = core.getInput('thread-count');
   const includeSectionsStr = core.getInput('include-sections');
   const excludeSectionsStr = core.getInput('exclude-sections');
+  // Defaults for fetchHistoryDays and retentionDays should not technically be needed, since
+  // default values are set in the action.yml file. These defaults are just here for extra safety.
+  const fetchHistoryDays = parseInt(core.getInput('fetch-history-days') || '30', 10);
+  const retentionDays = parseInt(core.getInput('retention-days') || '7', 10);
   const threadCount = threadCountStr ? parseInt(threadCountStr, 10) : undefined;
 
   const baseRevision = baseRevisionArg || process.env.GITHUB_BASE_REF;
@@ -38,7 +40,7 @@ async function runInGitHub(): Promise<void> {
   const headRevision = headRevisionArg || process.env.GITHUB_SHA;
   if (!headRevision)
     throw new Error(
-      'head-revision argument must be provided, or GITHUB_SHA must be available from GitHub (https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables).'
+      'head-revision argument must be provided, or GIHUB_SHA must be available from GitHub (https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables).'
     );
 
   const githubToken = core.getInput('github-token');
@@ -58,6 +60,7 @@ async function runInGitHub(): Promise<void> {
     githubRepo,
     githubToken,
     fetchHistoryDays,
+    retentionDays,
     threadCount,
   };
   log(LogLevel.Debug, `compareOptions: ${inspect(compareOptions)}`);
@@ -88,14 +91,14 @@ async function runInGitHub(): Promise<void> {
   const reportResult = await summarizeChanges(compareResult.reportDir, reportOptions);
   const octokit = getOctokit(githubToken) as unknown as Octokit;
 
-  const commenter = new Commenter(octokit, reportResult.reportFile);
+  const commenter = new Commenter(octokit, 'appmap', reportResult.reportFile);
   await commenter.comment();
 
   const excludedDirectories = core.getInput('annotation-exclusions').split(' ');
   const annotator = new Annotator(octokit, compareResult.reportDir, excludedDirectories);
   await annotator.annotate();
 
-  await uploadRunStats(artifactStore);
+  await uploadRunStats(artifactStore, retentionDays);
 
   core.setOutput('report-dir', compareResult.reportDir);
   if (process.env.GITHUB_STEP_SUMMARY) {
@@ -118,6 +121,7 @@ async function runLocally() {
   parser.add_argument('--artifact-dir', { default: '.appmap/artifacts' });
   parser.add_argument('--source-url');
   parser.add_argument('--appmap-url');
+  parser.add_argument('--retention-days', { default: '7' });
   parser.add_argument('--fetch-history-days', { default: '30' });
   parser.add_argument('--thread-count');
   parser.add_argument('--include-sections');
@@ -138,7 +142,8 @@ async function runLocally() {
     sourceDir: options.source_dir,
     githubToken: options.github_token || process.env.GITHUB_TOKEN,
     githubRepo: options.github_repo,
-    fetchHistoryDays: parseInt(options.fetch_history_days),
+    retentionDays: parseInt(options.retention_days, 10),
+    fetchHistoryDays: parseInt(options.fetch_history_days, 10),
   };
   if (options.thread_count) compareOptions.threadCount = parseInt(options.thread_count, 10);
 

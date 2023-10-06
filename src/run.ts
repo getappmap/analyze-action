@@ -27,7 +27,7 @@ export default async function compare(
     );
   await mkdir(outputDir, { recursive: true });
 
-  const archiver = new Archiver(artifactStore, headRevision);
+  const archiver = new Archiver(artifactStore, headRevision, options.retentionDays);
   if (options.appmapCommand) archiver.appmapCommand = options.appmapCommand;
   if (options.threadCount) archiver.threadCount = options.threadCount;
   const archiveResult = await archiver.archive();
@@ -41,7 +41,7 @@ export default async function compare(
   restorer.validate();
   await fetchAndRestore(restorer, options.fetchHistoryDays);
 
-  const comparer = new Compare(artifactStore, baseRevision, headRevision);
+  const comparer = new Compare(artifactStore, baseRevision, headRevision, options.retentionDays);
   comparer.outputDir = outputDir;
   if (options.appmapCommand) comparer.appmapCommand = options.appmapCommand;
   if (options.sourceDir) comparer.sourceDir = options.sourceDir;

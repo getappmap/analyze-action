@@ -7,7 +7,10 @@ import ArtifactStore from './ArtifactStore';
 export class DirectoryArtifactStore implements ArtifactStore {
   constructor(public directory: string) {}
 
-  async uploadArtifact(name: string, files: string[]): Promise<void> {
+  /**
+   * @param _retentionDays Ignored by this implementation.
+   */
+  async uploadArtifact(name: string, files: string[], _retentionDays: number): Promise<void> {
     await mkdir(this.directory, { recursive: true });
 
     log(LogLevel.Info, `Storing artifact ${name} in ${this.directory}`);

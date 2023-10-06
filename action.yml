@@ -8,7 +8,7 @@ inputs:
   base-revision:
     description: |
       The base revision to compare against. The default is the GITHUB_BASE_REF, which
-      according to GitHub is the name of the base ref or target branch of the pull request in a workflow run.
+      is the name of the base ref or target branch of the pull request in a workflow run.
   head-revision:
     description: |
       The head revision to compare against. The default is the GITHUB_SHA, which
@@ -17,11 +17,21 @@ inputs:
     description: |
       The GitHub token to use with the GitHub API to pull AppMap archives from build artifacts.
       Most commonly, you'll use `secrets.GITHUB_TOKEN`, which is automatically provided by GitHub.
+    default: ${{ github.token }}
   fetch-history-days:
     description: |
       The number of days of history to fetch in order to find the most recent ancestor that has
-      an AppMap archive. The default is 30 days. If an archive is not found, within this time window,
+      an AppMap archive. If an archive is not found, within this time window,
       the entire history will be fetched. To disable history fetching completely, set this value to 0.
+    default: '30'
+  archive-retention-days:
+    description: |
+      Number of days that the archive artifacts are retained for. Note that the AppMap archives created
+      by analyze-action are always built from the AppMaps on a PR branch, and therefore they are 
+      inherently more ephemeral than the base branch AppMaps created the archive-action. Therefore
+      a fairly short retention period is recommended. If artifacts need to be re-generated for
+      some reason, the workflow job can be re-run.
+    default: '7'
   thread-count:
     description:
       Number of worker threads to use for processing the archive. Defaults to the number of CPUs /

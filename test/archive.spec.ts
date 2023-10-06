@@ -15,7 +15,7 @@ describe('archive', () => {
     const findExistingArchives = jest.fn();
     findExistingArchives.mockReturnValueOnce(['.appmap/archive/full/the-revision.tar']);
 
-    const archiver = new Archiver(artifactStore, 'the-revision');
+    const archiver = new Archiver(artifactStore, 'the-revision', 7);
     archiver.archiveDetector = { findExistingArchives } as ArchiveDetector;
 
     const result = await archiver.archive();
@@ -38,7 +38,7 @@ describe('archive', () => {
 
     uploadArtifact.mockResolvedValueOnce({});
 
-    const archiver = new Archiver(artifactStore, 'the-revision');
+    const archiver = new Archiver(artifactStore, 'the-revision', 7);
     archiver.archiveDetector = { findExistingArchives } as ArchiveDetector;
     archiver.threadCount = 2;
     await archiver.archive();
@@ -51,8 +51,10 @@ describe('archive', () => {
     );
 
     expect(uploadArtifact).toBeCalledTimes(1);
-    expect(uploadArtifact).toBeCalledWith('appmap-archive-full_the-revision.tar', [
-      '.appmap/archive/full/the-revision.tar',
-    ]);
+    expect(uploadArtifact).toBeCalledWith(
+      'appmap-archive-full_the-revision.tar',
+      ['.appmap/archive/full/the-revision.tar'],
+      7
+    );
   });
 });
