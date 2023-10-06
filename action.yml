@@ -23,6 +23,14 @@ inputs:
       an AppMap archive. If an archive is not found, within this time window,
       the entire history will be fetched. To disable history fetching completely, set this value to 0.
     default: '30'
+  archive-retention-days:
+    description: |
+      Number of days that the archive artifacts are retained for. Note that the AppMap archives created
+      by analyze-action are always built from the AppMaps on a PR branch, and therefore they are 
+      inherently more ephemeral than the base branch AppMaps created the archive-action. Therefore
+      a fairly short retention period is recommended. If artifacts need to be re-generated for
+      some reason, the workflow job can be re-run.
+    default: '7'
   thread-count:
     description:
       Number of worker threads to use for processing the archive. Defaults to the number of CPUs /

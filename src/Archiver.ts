@@ -28,7 +28,11 @@ export default class Archiver {
   public archiveDetector: ArchiveDetector = new FileArchiveDetector();
   public threadCount?: number;
 
-  constructor(public artifactStore: ArtifactStore, public revision: string) {}
+  constructor(
+    public artifactStore: ArtifactStore,
+    public revision: string,
+    public retentionDays: number
+  ) {}
 
   async archive(): Promise<{ archiveFile: string }> {
     {
@@ -69,7 +73,7 @@ export default class Archiver {
     const [sha] = basename(archiveFile).split('.');
     const artifactName = `${artifactPrefix}_${sha}.tar`;
 
-    await this.artifactStore.uploadArtifact(artifactName, [archiveFile]);
+    await this.artifactStore.uploadArtifact(artifactName, [archiveFile], this.retentionDays);
 
     return { archiveFile };
   }

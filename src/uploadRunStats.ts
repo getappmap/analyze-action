@@ -6,7 +6,7 @@ import ArtifactStore from './ArtifactStore';
 
 const RunStatsDirectory = join('.appmap', 'run-stats');
 
-export default async function uploadRunStats(store: ArtifactStore) {
+export default async function uploadRunStats(store: ArtifactStore, retentionDays: number) {
   log(LogLevel.Info, 'Building the run stats artifact');
   try {
     const stats = await stat(RunStatsDirectory);
@@ -31,7 +31,7 @@ export default async function uploadRunStats(store: ArtifactStore) {
   }
 
   try {
-    await store.uploadArtifact('appmap-run-stats', statsFiles.slice(-1));
+    await store.uploadArtifact('appmap-run-stats', statsFiles.slice(-1), retentionDays);
     console.info(`Success! Run stats have been uploaded.`);
   } catch (e) {
     log(LogLevel.Warn, 'Failed to upload run stats');
