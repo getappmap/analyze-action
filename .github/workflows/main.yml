@@ -43,7 +43,6 @@ jobs:
         with:
           base-revision: ${{ github.event.pull_request.base.sha }}
           head-revision: ${{ github.event.pull_request.head.sha }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           include-sections: changed-appmaps
 
       - name: Commit changes
