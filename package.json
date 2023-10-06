@@ -32,7 +32,7 @@
   },
   "dependencies": {
     "@actions/artifact": "^1.1.1",
-    "@appland/action-utils": "https://github.com/getappmap/action-utils#19e6956b6b078a95154d0ba3fea2c762060b0b45",
+    "@appland/action-utils": "https://github.com/getappmap/action-utils",
     "argparse": "^2.0.1",
     "handlebars": "^4.7.7",
     "openapi-types": "^12.1.3"
