@@ -53,7 +53,8 @@ const github = __importStar(__nccwpck_require__(2245));
 const assert_1 = __importDefault(__nccwpck_require__(9491));
 const fs_1 = __importDefault(__nccwpck_require__(7147));
 class Commenter {
-    constructor(commentName, commentFile) {
+    constructor(octokit, commentName, commentFile) {
+        this.octokit = octokit;
         this.commentName = commentName;
         this.commentFile = commentFile;
     }
@@ -68,7 +69,7 @@ class Commenter {
     static get hasIssueNumber() {
         return !!Commenter.issueNumber;
     }
-    comment(octokit) {
+    comment() {
         return __awaiter(this, void 0, void 0, function* () {
             (0, assert_1.default)(Commenter.hasIssueNumber);
             const { context } = github;
@@ -76,22 +77,22 @@ class Commenter {
             (0, assert_1.default)(issueNumber);
             const content = fs_1.default.readFileSync(this.commentFile, 'utf8');
             const body = `${content}\n${Commenter.commentTagPattern(this.commentName)}`;
-            const comment = yield this.getAppMapComment(octokit, issueNumber);
+            const comment = yield this.getAppMapComment(issueNumber);
             if (comment) {
-                yield octokit.rest.issues.updateComment(Object.assign(Object.assign({}, context.repo), { comment_id: comment.id, body }));
+                yield this.octokit.rest.issues.updateComment(Object.assign(Object.assign({}, context.repo), { comment_id: comment.id, body }));
             }
             else {
-                yield octokit.rest.issues.createComment(Object.assign(Object.assign({}, context.repo), { issue_number: issueNumber, body }));
+                yield this.octokit.rest.issues.createComment(Object.assign(Object.assign({}, context.repo), { issue_number: issueNumber, body }));
             }
         });
     }
-    getAppMapComment(octokit, issueNumber) {
+    getAppMapComment(issueNumber) {
         var _a, e_1, _b, _c;
         return __awaiter(this, void 0, void 0, function* () {
             const { context } = github;
             let comment;
             try {
-                for (var _d = true, _e = __asyncValues(octokit.paginate.iterator(octokit.rest.issues.listComments, Object.assign(Object.assign({}, context.repo), { issue_number: issueNumber }))), _f; _f = yield _e.next(), _a = _f.done, !_a; _d = true) {
+                for (var _d = true, _e = __asyncValues(this.octokit.paginate.iterator(this.octokit.rest.issues.listComments, Object.assign(Object.assign({}, context.repo), { issue_number: issueNumber }))), _f; _f = yield _e.next(), _a = _f.done, !_a; _d = true) {
                     _c = _f.value;
                     _d = false;
                     const { data: comments } = _c;
@@ -38710,14 +38711,14 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
 const argparse_1 = __nccwpck_require__(1515);
 const action_utils_1 = __nccwpck_require__(1980);
+const github_1 = __nccwpck_require__(5438);
 const assert_1 = __importDefault(__nccwpck_require__(9491));
+const promises_1 = __nccwpck_require__(3292);
+const util_1 = __nccwpck_require__(3837);
 const DirectoryArtifactStore_1 = __nccwpck_require__(7607);
 const run_1 = __importStar(__nccwpck_require__(7764));
 const GitHubArtifactStore_1 = __nccwpck_require__(2427);
-const promises_1 = __nccwpck_require__(3292);
-const util_1 = __nccwpck_require__(3837);
 const Annotator_1 = __importDefault(__nccwpck_require__(9392));
-const github_1 = __nccwpck_require__(5438);
 const uploadRunStats_1 = __importDefault(__nccwpck_require__(7443));
 function runInGitHub() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -38736,7 +38737,7 @@ function runInGitHub() {
             throw new Error('base-revision argument must be provided, or GITHUB_BASE_REF must be available from GitHub (https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables).');
         const headRevision = headRevisionArg || process.env.GITHUB_SHA;
         if (!headRevision)
-            throw new Error('head-revision argument must be provided, or GITHUB_SHA must be available from GitHub (https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables).');
+            throw new Error('head-revision argument must be provided, or GIHUB_SHA must be available from GitHub (https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables).');
         const githubToken = core.getInput('github-token');
         const githubRepo = process.env.GITHUB_REPOSITORY;
         const githubServer = process.env.GITHUB_SERVER_URL;
@@ -38779,8 +38780,8 @@ function runInGitHub() {
         const compareResult = yield (0, run_1.default)(artifactStore, compareOptions);
         const reportResult = yield (0, run_1.summarizeChanges)(compareResult.reportDir, reportOptions);
         const octokit = (0, github_1.getOctokit)(githubToken);
-        const commenter = new action_utils_1.Commenter('appmap', reportResult.reportFile);
-        yield commenter.comment(octokit);
+        const commenter = new action_utils_1.Commenter(octokit, 'appmap', reportResult.reportFile);
+        yield commenter.comment();
         const excludedDirectories = core.getInput('annotation-exclusions').split(' ');
         const annotator = new Annotator_1.default(octokit, compareResult.reportDir, excludedDirectories);
         yield annotator.annotate();

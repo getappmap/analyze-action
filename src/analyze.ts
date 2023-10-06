@@ -37,7 +37,7 @@ async function runInGitHub(): Promise<void> {
   const headRevision = headRevisionArg || process.env.GITHUB_SHA;
   if (!headRevision)
     throw new Error(
-      'head-revision argument must be provided, or GITHUB_SHA must be available from GitHub (https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables).'
+      'head-revision argument must be provided, or GIHUB_SHA must be available from GitHub (https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables).'
     );
 
   const githubToken = core.getInput('github-token');
