@@ -19,6 +19,7 @@ async function runInGitHub(): Promise<void> {
   verbose(core.getInput('verbose'));
   setLogger(new ActionLogger());
 
+  const directory = core.getInput('directory');
   const baseRevisionArg = core.getInput('base-revision');
   const headRevisionArg = core.getInput('head-revision');
   const sourceDir = core.getInput('source-dir');
@@ -52,6 +53,11 @@ async function runInGitHub(): Promise<void> {
   assert(githubRepo, 'repository is undefined');
   assert(githubServer, 'server URL is undefined');
   assert(runId, 'run id is undefined');
+
+  if (directory) {
+    log(LogLevel.Info, `Changing working directory: ${directory}`);
+    process.chdir(directory);
+  }
 
   const compareOptions: CompareOptions = {
     baseRevision,
@@ -133,7 +139,11 @@ async function runLocally() {
   const artifactDir = options.artifact_dir;
   assert(artifactDir);
   const directory = options.directory;
-  if (directory) process.chdir(directory);
+
+  if (directory) {
+    log(LogLevel.Info, `Changing working directory: ${directory}`);
+    process.chdir(directory);
+  }
 
   const compareOptions: CompareOptions = {
     appmapCommand: options.appmap_command,

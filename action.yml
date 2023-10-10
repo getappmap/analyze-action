@@ -5,6 +5,8 @@ branding:
 description: |
   Analyze the changes between two code revisions.
 inputs:
+  directory:
+    description: Command working directory.
   base-revision:
     description: |
       The base revision to compare against. The default is the GITHUB_BASE_REF, which
