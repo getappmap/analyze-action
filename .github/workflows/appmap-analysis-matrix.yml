@@ -10,7 +10,11 @@ on:
         required: false
         type: string
         default: ubuntu-latest
-    
+      directory:
+        required: false
+        type: string
+        default: .
+
 jobs:
   analyze:
     # If your organization has 4-core runners available, you should change this line to use
@@ -29,12 +33,13 @@ jobs:
       - name: Install AppMap tools
         uses: getappmap/install-action@v1
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          directory: ${{ inputs.directory }}
           install-appmap-library: false
 
       - name: Merge AppMaps
         uses: getappmap/archive-action/merge@v1
         with:
+          directory: ${{ inputs.directory }}
           revision: ${{ github.event.pull_request.head.sha }}
           archive-count: ${{ inputs.archive-count }}
 
@@ -42,6 +47,6 @@ jobs:
         uses: getappmap/analyze-action@v1
         if: (success() || failure()) && github.event_name == 'pull_request'
         with:
+          directory: ${{ inputs.directory }}
           base-revision: ${{ github.event.pull_request.base.sha }}
           head-revision: ${{ github.event.pull_request.head.sha }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
