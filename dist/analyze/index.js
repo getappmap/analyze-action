@@ -27762,6 +27762,7 @@ function runInGitHub() {
     return __awaiter(this, void 0, void 0, function* () {
         (0, action_utils_1.verbose)(core.getInput('verbose'));
         (0, action_utils_1.setLogger)(new action_utils_1.ActionLogger());
+        const directory = core.getInput('directory');
         const baseRevisionArg = core.getInput('base-revision');
         const headRevisionArg = core.getInput('head-revision');
         const sourceDir = core.getInput('source-dir');
@@ -27787,6 +27788,10 @@ function runInGitHub() {
         (0, assert_1.default)(githubRepo, 'repository is undefined');
         (0, assert_1.default)(githubServer, 'server URL is undefined');
         (0, assert_1.default)(runId, 'run id is undefined');
+        if (directory) {
+            (0, action_utils_1.log)(action_utils_1.LogLevel.Info, `Changing working directory: ${directory}`);
+            process.chdir(directory);
+        }
         const compareOptions = {
             baseRevision,
             headRevision,
@@ -27860,8 +27865,10 @@ function runLocally() {
         const artifactDir = options.artifact_dir;
         (0, assert_1.default)(artifactDir);
         const directory = options.directory;
-        if (directory)
+        if (directory) {
+            (0, action_utils_1.log)(action_utils_1.LogLevel.Info, `Changing working directory: ${directory}`);
             process.chdir(directory);
+        }
         const compareOptions = {
             appmapCommand: options.appmap_command,
             baseRevision: options.base_revision,

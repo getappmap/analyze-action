@@ -7,6 +7,10 @@ on:
         required: false
         type: string
         default: ubuntu-latest
+      directory:
+        required: false
+        type: string
+        default: .
 
 jobs:
   analyze:
@@ -28,23 +32,25 @@ jobs:
         id: install-appmap
         uses: getappmap/install-action@v1
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          directory: ${{ inputs.directory }}
           install-appmap-library: false
 
       - name: Restore AppMaps
         uses: actions/cache/restore@v3
         with:
-          path: ${{ steps.install-appmap.outputs.appmap-dir }}
+          path: ${{ inputs.directory }}/${{ steps.install-appmap.outputs.appmap-dir }}
           key: appmaps-${{ github.sha }}-${{ github.run_attempt }}
 
       - name: Archive AppMaps
         if: github.event_name != 'pull_request'
         uses: getappmap/archive-action@v1
+        with:
+          directory: ${{ inputs.directory }}
 
       - name: Analyze AppMaps
         uses: getappmap/analyze-action@v1
         if: github.event_name == 'pull_request'
         with:
+          directory: ${{ inputs.directory }}
           base-revision: ${{ github.event.pull_request.base.sha }}
           head-revision: ${{ github.event.pull_request.head.sha }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
