@@ -81,7 +81,7 @@ async function runInGitHub(): Promise<void> {
     base_revision: baseRevision,
     head_revision: headRevision,
   });
-  const appmapURL = new URL(`https://app.land/github_artifact?${appmapURLParams.toString()}`);
+  const appmapURL = new URL(`https://getappmap.com/github_artifact?${appmapURLParams.toString()}`);
 
   const reportOptions: ReportOptions = {
     sourceURL,
