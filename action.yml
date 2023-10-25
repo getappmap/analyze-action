@@ -59,8 +59,10 @@ inputs:
     description: |
       Enable the project summary report. This feature is also enabled automatically when a pull
       request contains the archive-action configuration report.
+    default: 'false'
   verbose:
     description: Enable verbose logging.
+    default: 'false'
 outputs:
   report-dir:
     description: Directory containing the report files.
