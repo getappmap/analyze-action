@@ -42,6 +42,7 @@ export default class Archiver {
       }
     }
 
+    log(LogLevel.Info, `No existing archive found for revision ${this.revision}`);
     log(LogLevel.Info, `Archiving AppMaps from ${process.cwd()}`);
 
     let archiveCommand = `${this.appmapCommand} archive --revision ${this.revision}`;

@@ -55,6 +55,10 @@ inputs:
       Sections to exclude from the report. Enter the sections as a space-separated list
       (e.g. test-failures api). The default is to generate all sections except for those which are
       in beta / early access.
+  project-summary:
+    description: |
+      Enable the project summary report. This feature is also enabled automatically when a pull
+      request contains the archive-action configuration report.
   verbose:
     description: Enable verbose logging.
 outputs:
