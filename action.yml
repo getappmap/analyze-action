@@ -62,7 +62,6 @@ inputs:
     default: 'false'
   verbose:
     description: Enable verbose logging.
-    default: 'false'
 outputs:
   report-dir:
     description: Directory containing the report files.
