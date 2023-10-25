@@ -16,13 +16,10 @@ import assert from 'assert';
 import { cp } from 'fs/promises';
 import { inspect } from 'util';
 
-import { DirectoryArtifactStore } from './DirectoryArtifactStore';
-import compare, { summarizeChanges } from './run';
-import { GitHubArtifactStore } from './GitHubArtifactStore';
-import ReportOptions from './ReportOptions';
-import CompareOptions from './CompareOptions';
+import { compare, compareReport, CompareOptions } from './run';
 import Annotator from './Annotator';
 import uploadRunStats from './uploadRunStats';
+import { CompareReportOptions } from './CompareReport';
 
 async function runInGitHub(): Promise<void> {
   verbose(core.getInput('verbose'));
@@ -92,7 +89,7 @@ async function runInGitHub(): Promise<void> {
   });
   const appmapURL = new URL(`https://getappmap.com/github_artifact?${appmapURLParams.toString()}`);
 
-  const reportOptions: ReportOptions = {
+  const reportOptions: CompareReportOptions = {
     sourceURL,
     appmapURL,
   };
@@ -103,7 +100,8 @@ async function runInGitHub(): Promise<void> {
 
   const artifactStore = new GitHubArtifactStore();
   const compareResult = await compare(artifactStore, compareOptions);
-  const reportResult = await summarizeChanges(compareResult.reportDir, reportOptions);
+  const compareReportResult = await compareReport(compareResult.reportDir, reportOptions);
+
   const octokit = getOctokit(githubToken) as unknown as Octokit;
 
   const commenter = new Commenter(octokit, 'appmap', reportResult.reportFile);
@@ -117,7 +115,7 @@ async function runInGitHub(): Promise<void> {
 
   core.setOutput('report-dir', compareResult.reportDir);
   if (process.env.GITHUB_STEP_SUMMARY) {
-    await cp(reportResult.reportFile, process.env.GITHUB_STEP_SUMMARY);
+    await cp(compareReportResult.reportFile, process.env.GITHUB_STEP_SUMMARY);
   }
 }
 
@@ -168,13 +166,14 @@ async function runLocally() {
 
   const compareResult = await compare(new DirectoryArtifactStore(artifactDir), compareOptions);
 
-  const reportOptions = {} as ReportOptions;
+  const reportOptions = {} as CompareReportOptions;
   if (options.appmap_command) reportOptions.appmapCommand = options.appmap_command;
   if (options.source_url) reportOptions.sourceURL = new URL(options.source_url);
   if (options.appmap_url) reportOptions.appmapURL = new URL(options.appmap_url);
   if (options.include_sections) reportOptions.includeSections = options.include_sections.split(' ');
   if (options.exclude_sections) reportOptions.excludeSections = options.exclude_sections.split(' ');
-  await summarizeChanges(compareResult.reportDir, reportOptions);
+  await compareReport(compareResult.reportDir, reportOptions);
+
 }
 
 if (require.main === module) {

@@ -7,13 +7,22 @@ import { executeCommand, ArtifactStore } from '@appland/action-utils';
 import Compare from './Compare';
 import Restore from './Restore';
 import Archiver from './Archiver';
-import ArtifactStore from './ArtifactStore';
-import CompareOptions from './CompareOptions';
-import MarkdownReport from './MarkdownReport';
-import ReportOptions from './ReportOptions';
+import CompareReport, { CompareReportOptions as CompareReportOptions } from './CompareReport';
 import fetchAndRestore from './fetchAndRestore';
 
-export default async function compare(
+export interface CompareOptions {
+  baseRevision: string;
+  headRevision: string;
+  fetchHistoryDays: number;
+  retentionDays: number;
+  appmapCommand?: string;
+  sourceDir?: string;
+  githubToken?: string;
+  githubRepo?: string;
+  threadCount?: number;
+}
+
+export async function compare(
   artifactStore: ArtifactStore,
   options: CompareOptions
 ): Promise<{ reportDir: string }> {
@@ -49,11 +58,11 @@ export default async function compare(
   return comparer.compare();
 }
 
-export async function summarizeChanges(
+export async function compareReport(
   outputDir: string,
-  options: ReportOptions
+  options: CompareReportOptions
 ): Promise<{ reportFile: string }> {
-  const reporter = new MarkdownReport(outputDir, options);
+  const reporter = new CompareReport(outputDir, options);
   if (options.includeSections) reporter.includeSections = options.includeSections;
   if (options.excludeSections) reporter.excludeSections = options.excludeSections;
   const reportFile = join(outputDir, 'report.md');
