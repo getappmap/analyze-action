@@ -29225,7 +29225,12 @@ function fetchInitialHistory(sinceDays) {
         const month = String(fetchSinceDate.getMonth() + 1).padStart(2, '0');
         const day = String(fetchSinceDate.getDate()).padStart(2, '0');
         const formattedDate = `${year}-${month}-${day}`;
-        yield (0, action_utils_1.executeCommand)(`git fetch --shallow-since ${formattedDate}`);
+        try {
+            yield (0, action_utils_1.executeCommand)(`git fetch --shallow-since ${formattedDate}`);
+        }
+        catch (e) {
+            (0, action_utils_1.log)(action_utils_1.LogLevel.Warn, `Failed to fetch history since ${formattedDate}: ${e}`);
+        }
     });
 }
 exports.fetchInitialHistory = fetchInitialHistory;
@@ -29233,7 +29238,12 @@ exports.fetchInitialHistory = fetchInitialHistory;
 function fetchAllHistory() {
     return __awaiter(this, void 0, void 0, function* () {
         // 128: fatal: --unshallow on a complete repository does not make sense
-        yield (0, action_utils_1.executeCommand)(`git fetch --unshallow`, { allowedCodes: [0, 128] });
+        try {
+            yield (0, action_utils_1.executeCommand)(`git fetch --unshallow`, { allowedCodes: [0, 128] });
+        }
+        catch (e) {
+            (0, action_utils_1.log)(action_utils_1.LogLevel.Warn, `Failed to fetch --unshallow: ${e}`);
+        }
     });
 }
 exports.fetchAllHistory = fetchAllHistory;
