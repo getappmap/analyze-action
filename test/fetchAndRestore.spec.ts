@@ -7,7 +7,7 @@ import Restore from '../src/Restore';
 
 if (process.env.VERBOSE) verbose(true);
 
-describe('analyze', () => {
+describe('fetchAndRestore', () => {
   let restorer: Restore;
   let nowFn: jest.SpyInstance;
   let restoreFn: jest.SpyInstance;

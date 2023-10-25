@@ -1,8 +1,6 @@
 import { existsSync } from 'fs';
 import { basename, dirname, join } from 'path';
-import { log, LogLevel, executeCommand, verbose } from '@appland/action-utils';
-
-import ArtifactStore from './ArtifactStore';
+import { log, LogLevel, executeCommand, verbose, ArtifactStore } from '@appland/action-utils';
 
 export interface ArchiveDetector {
   findExistingArchives(revision: string): string[];

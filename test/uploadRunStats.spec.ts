@@ -5,12 +5,11 @@ import { chdir } from 'node:process';
 import * as actionUtils from '@appland/action-utils';
 
 import uploadRunStats from '../src/uploadRunStats';
-import type ArtifactStore from '../src/ArtifactStore';
 
 describe('uploadRunStats', () => {
   let tmpDir: string;
   let log: jest.SpyInstance;
-  const artifactStore: ArtifactStore = {
+  const artifactStore: actionUtils.ArtifactStore = {
     uploadArtifact: jest.fn(),
   };
   const cwd = process.cwd();

@@ -2,7 +2,7 @@ import { mkdir } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
 import assert from 'assert';
-import { executeCommand } from '@appland/action-utils';
+import { executeCommand, ArtifactStore } from '@appland/action-utils';
 
 import Compare from './Compare';
 import Restore from './Restore';

@@ -1,6 +1,15 @@
 import * as core from '@actions/core';
 import { ArgumentParser } from 'argparse';
-import { log, LogLevel, ActionLogger, setLogger, verbose, Commenter } from '@appland/action-utils';
+import {
+  log,
+  LogLevel,
+  ActionLogger,
+  setLogger,
+  verbose,
+  Commenter,
+  DirectoryArtifactStore,
+  GitHubArtifactStore,
+} from '@appland/action-utils';
 import { getOctokit } from '@actions/github';
 import { Octokit } from '@octokit/rest';
 import assert from 'assert';
