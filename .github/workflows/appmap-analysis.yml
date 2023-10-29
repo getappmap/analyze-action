@@ -11,6 +11,10 @@ on:
         required: false
         type: string
         default: .
+      bootstrap:
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   analyze:
@@ -42,10 +46,15 @@ jobs:
           key: appmaps-${{ github.sha }}-${{ github.run_attempt }}
 
       - name: Archive AppMaps
-        if: github.event_name != 'pull_request'
+        if: inputs.bootstrap || ( github.event_name != 'pull_request' )
         uses: getappmap/archive-action@v1
         with:
+          revision: ${{ github.event.pull_request.base.sha || github.sha }}
           directory: ${{ inputs.directory }}
+
+      - name: Remove archive info file
+        if: inputs.bootstrap
+        run: rm ${{ inputs.directory }}/tmp/appmap/appmap_archive.json
 
       - name: Analyze AppMaps
         uses: getappmap/analyze-action@v1
