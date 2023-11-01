@@ -1,13 +1,19 @@
 import { executeCommand, verbose } from '@appland/action-utils';
 
-import ReportOptions from './ReportOptions';
+export interface CompareReportOptions {
+  sourceURL?: URL;
+  appmapURL?: URL;
+  appmapCommand?: string;
+  includeSections?: string[];
+  excludeSections?: string[];
+}
 
-export default class MarkdownReport {
+export default class CompareReport {
   public appmapCommand = 'appmap';
   public includeSections?: string[];
   public excludeSections?: string[];
 
-  constructor(public reportDir: string, public options: ReportOptions) {
+  constructor(public reportDir: string, public options: CompareReportOptions) {
     if (options.appmapCommand) this.appmapCommand = options.appmapCommand;
   }
 

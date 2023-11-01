@@ -1,8 +1,7 @@
-import { verbose } from '@appland/action-utils';
+import { verbose, ArtifactStore } from '@appland/action-utils';
 import * as actionUtils from '@appland/action-utils';
 
 import Archiver, { ArchiveDetector } from '../src/Archiver';
-import ArtifactStore from '../src/ArtifactStore';
 
 if (process.env.VERBOSE) verbose(true);
 

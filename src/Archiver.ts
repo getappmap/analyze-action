@@ -1,8 +1,6 @@
 import { existsSync } from 'fs';
 import { basename, dirname, join } from 'path';
-import { log, LogLevel, executeCommand, verbose } from '@appland/action-utils';
-
-import ArtifactStore from './ArtifactStore';
+import { log, LogLevel, executeCommand, verbose, ArtifactStore } from '@appland/action-utils';
 
 export interface ArchiveDetector {
   findExistingArchives(revision: string): string[];
@@ -44,6 +42,7 @@ export default class Archiver {
       }
     }
 
+    log(LogLevel.Info, `No existing archive found for revision ${this.revision}`);
     log(LogLevel.Info, `Archiving AppMaps from ${process.cwd()}`);
 
     let archiveCommand = `${this.appmapCommand} archive --revision ${this.revision}`;

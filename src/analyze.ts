@@ -1,19 +1,26 @@
 import * as core from '@actions/core';
 import { ArgumentParser } from 'argparse';
-import { log, LogLevel, ActionLogger, setLogger, verbose, Commenter } from '@appland/action-utils';
+import {
+  log,
+  LogLevel,
+  ActionLogger,
+  setLogger,
+  verbose,
+  Commenter,
+  DirectoryArtifactStore,
+  GitHubArtifactStore,
+} from '@appland/action-utils';
 import { getOctokit } from '@actions/github';
 import { Octokit } from '@octokit/rest';
 import assert from 'assert';
 import { cp } from 'fs/promises';
 import { inspect } from 'util';
 
-import { DirectoryArtifactStore } from './DirectoryArtifactStore';
-import compare, { summarizeChanges } from './run';
-import { GitHubArtifactStore } from './GitHubArtifactStore';
-import ReportOptions from './ReportOptions';
-import CompareOptions from './CompareOptions';
+import { compare, compareReport, CompareOptions } from './run';
 import Annotator from './Annotator';
 import uploadRunStats from './uploadRunStats';
+import { CompareReportOptions } from './CompareReport';
+import ProjectSummaryReport, { ProjectSummaryReportOptions } from './ProjectSummaryReport';
 
 async function runInGitHub(): Promise<void> {
   verbose(core.getInput('verbose'));
@@ -31,6 +38,7 @@ async function runInGitHub(): Promise<void> {
   const fetchHistoryDays = parseInt(core.getInput('fetch-history-days') || '30', 10);
   const retentionDays = parseInt(core.getInput('retention-days') || '7', 10);
   const threadCount = threadCountStr ? parseInt(threadCountStr, 10) : undefined;
+  const projectSummary = core.getBooleanInput('project-summary');
 
   const baseRevision = baseRevisionArg || process.env.GITHUB_BASE_REF;
   if (!baseRevision)
@@ -81,9 +89,9 @@ async function runInGitHub(): Promise<void> {
     base_revision: baseRevision,
     head_revision: headRevision,
   });
-  const appmapURL = new URL(`https://app.land/github_artifact?${appmapURLParams.toString()}`);
+  const appmapURL = new URL(`https://getappmap.com/github_artifact?${appmapURLParams.toString()}`);
 
-  const reportOptions: ReportOptions = {
+  const reportOptions: CompareReportOptions = {
     sourceURL,
     appmapURL,
   };
@@ -93,22 +101,35 @@ async function runInGitHub(): Promise<void> {
   log(LogLevel.Debug, `reportOptions: ${inspect(reportOptions)}`);
 
   const artifactStore = new GitHubArtifactStore();
+
   const compareResult = await compare(artifactStore, compareOptions);
-  const reportResult = await summarizeChanges(compareResult.reportDir, reportOptions);
+  const compareReportResult = await compareReport(compareResult.reportDir, reportOptions);
+
   const octokit = getOctokit(githubToken) as unknown as Octokit;
 
-  const commenter = new Commenter(octokit, 'appmap', reportResult.reportFile);
-  await commenter.comment();
+  const projectSummaryReport = new ProjectSummaryReport(compareResult.reportDir, headRevision, {
+    sourceURL,
+  });
+  if (projectSummary || (await projectSummaryReport.shouldReport(octokit))) {
+    const projectSummaryReportResult = await projectSummaryReport.generateReport();
+    await projectSummaryReport.comment(octokit, projectSummaryReportResult.reportFile);
+  }
 
-  const excludedDirectories = core.getInput('annotation-exclusions').split(' ');
-  const annotator = new Annotator(octokit, compareResult.reportDir, excludedDirectories);
-  await annotator.annotate();
-
-  await uploadRunStats(artifactStore, retentionDays);
-
+  {
+    const commenter = new Commenter(octokit, 'appmap');
+    await commenter.comment(compareReportResult.reportFile);
+  }
+  {
+    const excludedDirectories = core.getInput('annotation-exclusions').split(' ');
+    const annotator = new Annotator(octokit, compareResult.reportDir, excludedDirectories);
+    await annotator.annotate();
+  }
+  {
+    await uploadRunStats(artifactStore, retentionDays);
+  }
   core.setOutput('report-dir', compareResult.reportDir);
   if (process.env.GITHUB_STEP_SUMMARY) {
-    await cp(reportResult.reportFile, process.env.GITHUB_STEP_SUMMARY);
+    await cp(compareReportResult.reportFile, process.env.GITHUB_STEP_SUMMARY);
   }
 }
 
@@ -121,6 +142,7 @@ async function runLocally() {
   parser.add_argument('--appmap-command', { default: 'appmap' });
   parser.add_argument('--base-revision', { required: true });
   parser.add_argument('--head-revision', { required: true });
+  parser.add_argument('--project-summary', { type: Boolean, default: true });
   parser.add_argument('--source-dir');
   parser.add_argument('--github-token');
   parser.add_argument('--github-repo');
@@ -159,13 +181,25 @@ async function runLocally() {
 
   const compareResult = await compare(new DirectoryArtifactStore(artifactDir), compareOptions);
 
-  const reportOptions = {} as ReportOptions;
+  const reportOptions = {} as CompareReportOptions;
   if (options.appmap_command) reportOptions.appmapCommand = options.appmap_command;
   if (options.source_url) reportOptions.sourceURL = new URL(options.source_url);
   if (options.appmap_url) reportOptions.appmapURL = new URL(options.appmap_url);
   if (options.include_sections) reportOptions.includeSections = options.include_sections.split(' ');
   if (options.exclude_sections) reportOptions.excludeSections = options.exclude_sections.split(' ');
-  await summarizeChanges(compareResult.reportDir, reportOptions);
+  await compareReport(compareResult.reportDir, reportOptions);
+
+  if (options.project_summary) {
+    const projectSummaryOptions = {} as ProjectSummaryReportOptions;
+    if (options.appmap_command) projectSummaryOptions.appmapCommand = options.appmap_command;
+    if (options.source_url) projectSummaryOptions.sourceURL = options.source_url;
+    const projectSummaryReport = new ProjectSummaryReport(
+      compareResult.reportDir,
+      options.head_revision,
+      projectSummaryOptions
+    );
+    await projectSummaryReport.generateReport();
+  }
 }
 
 if (require.main === module) {

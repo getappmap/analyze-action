@@ -1,8 +1,6 @@
 import { readdir, stat } from 'node:fs/promises';
-import { log, LogLevel, verbose } from '@appland/action-utils';
+import { log, LogLevel, verbose, ArtifactStore } from '@appland/action-utils';
 import { join } from 'node:path';
-
-import ArtifactStore from './ArtifactStore';
 
 const RunStatsDirectory = join('.appmap', 'run-stats');
 
