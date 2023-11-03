@@ -3,6 +3,10 @@ name: AppMap Analysis
 on:
   workflow_call:
     inputs:
+      archive-retention-days:
+        required: false
+        type: number
+        default: 7
       runner-name:
         required: false
         type: string
@@ -51,6 +55,7 @@ jobs:
         uses: getappmap/analyze-action@v1
         if: github.event_name == 'pull_request'
         with:
+          archive-retention-days: ${{ inputs.archive-retention-days }}
           directory: ${{ inputs.directory }}
           base-revision: ${{ github.event.pull_request.base.sha }}
           head-revision: ${{ github.event.pull_request.head.sha }}
