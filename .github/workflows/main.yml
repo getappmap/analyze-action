@@ -47,6 +47,7 @@ jobs:
           base-revision: ${{ github.event.pull_request.base.sha }}
           head-revision: ${{ github.event.pull_request.head.sha }}
           include-sections: changed-appmaps
+          project-summary: true
 
       - name: Commit changes
         # If you forgot to package the distribution, you'll see a commit added to your PR
