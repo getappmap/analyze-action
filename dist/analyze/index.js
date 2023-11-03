@@ -28850,6 +28850,8 @@ class ProjectSummaryReport {
             {
                 (0, action_utils_1.log)(action_utils_1.LogLevel.Info, `Generating summary report ${summaryFile}`);
                 let command = `${this.appmapCommand} inventory-report ${inventoryDataFile} ${summaryFile} --template-name summary`;
+                if (this.options.sourceURL)
+                    command += ` --source-url ${this.options.sourceURL}`;
                 if ((0, action_utils_1.verbose)())
                     command += ' --verbose';
                 yield (0, action_utils_1.executeCommand)(command);
