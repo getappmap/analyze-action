@@ -42,6 +42,7 @@ export default class ProjectSummaryReport {
     {
       log(LogLevel.Info, `Generating summary report ${summaryFile}`);
       let command = `${this.appmapCommand} inventory-report ${inventoryDataFile} ${summaryFile} --template-name summary`;
+      if (this.options.sourceURL) command += ` --source-url ${this.options.sourceURL}`;
       if (verbose()) command += ' --verbose';
       await executeCommand(command);
     }
