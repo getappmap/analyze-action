@@ -39,6 +39,8 @@ async function runInGitHub(): Promise<void> {
   const retentionDays = parseInt(core.getInput('retention-days') || '7', 10);
   const threadCount = threadCountStr ? parseInt(threadCountStr, 10) : undefined;
   const projectSummary = core.getBooleanInput('project-summary');
+  const issueNumberStr = core.getInput('issue-number')
+  const issueNumber = issueNumberStr ? parseInt(issueNumberStr) : undefined;
 
   const baseRevision = baseRevisionArg || process.env.GITHUB_BASE_REF;
   if (!baseRevision)
@@ -116,7 +118,7 @@ async function runInGitHub(): Promise<void> {
   }
 
   {
-    const commenter = new Commenter(octokit, 'appmap');
+    const commenter = new Commenter(octokit, 'appmap', issueNumber);
     await commenter.comment(compareReportResult.reportFile);
   }
   {

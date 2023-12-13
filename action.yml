@@ -60,6 +60,11 @@ inputs:
       Enable the project summary report. This feature is also enabled automatically when a pull
       request contains the archive-action configuration report.
     default: 'false'
+  issue-number:
+    description:
+      Explicitly pass the issue number to the analyze function.  This is useful in cases where
+      you are triggering this action via a webhook from another service and the action is not aware
+      of which Pull Request to comment an analysis report on.
   verbose:
     description: Enable verbose logging.
 outputs:
