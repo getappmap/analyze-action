@@ -39,8 +39,7 @@ async function runInGitHub(): Promise<void> {
   const retentionDays = parseInt(core.getInput('retention-days') || '7', 10);
   const threadCount = threadCountStr ? parseInt(threadCountStr, 10) : undefined;
   const projectSummary = core.getBooleanInput('project-summary');
-  const issueNumberStr = core.getInput('issue-number')
-  const issueNumber = issueNumberStr ? parseInt(issueNumberStr) : undefined;
+  const issueNumber = parseIssueNumber(core.getInput('issue-number'));
 
   const baseRevision = baseRevisionArg || process.env.GITHUB_BASE_REF;
   if (!baseRevision)
@@ -207,4 +206,18 @@ async function runLocally() {
 if (require.main === module) {
   if (process.env.CI) runInGitHub();
   else runLocally();
+}
+
+export function parseIssueNumber(input: unknown): number | undefined {
+  // If the input is a number and it's an integer, return it directly
+  if (typeof input === 'number' && Number.isInteger(input)) {
+    return input;
+  }
+
+  if (typeof input !== 'string') {
+    return undefined;
+  }
+
+  const parsed = parseInt(input);
+  return isNaN(parsed) ? undefined : parsed;
 }
