@@ -28968,6 +28968,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.parseIssueNumber = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const argparse_1 = __nccwpck_require__(1515);
 const action_utils_1 = __nccwpck_require__(1259);
@@ -28996,8 +28997,7 @@ function runInGitHub() {
         const retentionDays = parseInt(core.getInput('retention-days') || '7', 10);
         const threadCount = threadCountStr ? parseInt(threadCountStr, 10) : undefined;
         const projectSummary = core.getBooleanInput('project-summary');
-        const issueNumberStr = core.getInput('issue-number');
-        const issueNumber = issueNumberStr ? parseInt(issueNumberStr) : undefined;
+        const issueNumber = parseIssueNumber(core.getInput('issue-number'));
         const baseRevision = baseRevisionArg || process.env.GITHUB_BASE_REF;
         if (!baseRevision)
             throw new Error('base-revision argument must be provided, or GITHUB_BASE_REF must be available from GitHub (https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables).');
@@ -29149,6 +29149,18 @@ if (require.main === require.cache[eval('__filename')]) {
     else
         runLocally();
 }
+function parseIssueNumber(input) {
+    // If the input is a number and it's an integer, return it directly
+    if (typeof input === 'number' && Number.isInteger(input)) {
+        return input;
+    }
+    if (typeof input !== 'string') {
+        return undefined;
+    }
+    const parsed = parseInt(input);
+    return isNaN(parsed) ? undefined : parsed;
+}
+exports.parseIssueNumber = parseIssueNumber;
 
 
 /***/ }),
