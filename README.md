@@ -107,6 +107,11 @@ Add a step like this to your workflow:
     # comment be submitted on any workflow run.
     project-summary: true
 
+    # Explicitly pass the issue number to the analyze function.  This is useful in cases where
+    # you are triggering this action via a webhook from another service and the action is not aware
+    # of which Pull Request to comment an analysis report on.
+    issue-number: 14
+
     # Enable verbose logging of CLI subcommands. You can use the standard GitHub
     # Action log level option to control verbosity of this Action itself.
     # Default: false
